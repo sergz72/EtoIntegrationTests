@@ -1,0 +1,83 @@
+service_sets:
+  default:
+    includes:
+      - stubs
+    services:
+      - kafka
+      - cassandra
+
+service_subsets:
+  stubs:
+    - acms-stubs
+
+services:
+  kafka:
+    disabled: false
+    scripts:
+      zookeeper:
+        workdir: c:\kafka\bin\windows
+        commands:
+          - rm -rf c:/kafka/logs/*
+          - rm -rf c:/kafka/zookeeper-data/*
+          - zookeeper-server-start.bat ..\..\config\zookeeper.properties
+        windows:
+          console:
+            type: console
+      kafka:
+        wait_for_ports: [2181]
+        workdir: c:\kafka\bin\windows
+        commands:
+          - kafka-server-start.bat ..\..\config\server.properties
+        windows:
+          console:
+            type: console
+          communicator:
+            type: kafka
+            parameters: 127.0.0.1:9092 communicator communicator_testconsumer
+          policy:
+            type: kafka
+            parameters: 127.0.0.1:9092 policy-engine-container-effective-policy-change policy_testconsumer
+      topic_create:
+        wait_for_ports: [9092]
+        workdir: c:\kafka\bin\windows
+        commands:
+          - kafka-topics.bat --bootstrap-server 127.0.0.1:9092 --create --topic communicator
+          - kafka-topics.bat --bootstrap-server 127.0.0.1:9092 --create --topic policy-engine-container-effective-policy-change
+        windows:
+          console:
+            type: console
+
+  cassandra:
+    disabled: false
+    scripts:
+      cassandra:
+        workdir: c:\cassandra\bin
+        commands:
+          - rm -rf c:/cassandra/logs/*
+          - rm -rf c:/cassandra/data/*
+          - run_cassandra.bat
+        windows:
+          console:
+            type: console
+          platform_communicator_db:
+            type: cassandra
+            parameters: 127.0.0.1 9092 platform_communicator_db
+      db_create:
+        wait_for_ports: [9042]
+        workdir: D:\projects\connectwise\GoLand\communicator\cassandra-init\bin
+        commands:
+          - cassandra_init.exe platform_communicator_db D:\projects\connectwise\GoLand\communicator\communicator-service\cql\changelogs
+        windows:
+          console:
+            type: console
+
+  acms-stubs:
+    disabled: false
+    scripts:
+      acms-stubs:
+        workdir: D:\projects\connectwise\GoLand\communicator\communicator-service\bin
+        commands:
+          - acms-stubs.exe
+        windows:
+          console:
+            type: console

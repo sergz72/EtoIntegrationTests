@@ -1,0 +1,206 @@
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using YamlDotNet.Serialization;
+
+namespace EtoIntegrationTests.Model;
+
+public class Script
+{
+  [YamlMember(Alias = "service_sets", ApplyNamingConventions = false)]
+  public Dictionary<string, ServiceSet> ServiceSets { get; set; }
+
+  [YamlMember(Alias = "service_subsets", ApplyNamingConventions = false)]
+  public Dictionary<string, List<string>> ServiceSubSets { get; set; }
+
+  public Dictionary<string, YAMLService> Services { get; set; }
+
+  public Script()
+  {
+    ServiceSets = new Dictionary<string, ServiceSet>();
+    Services = new Dictionary<string, YAMLService>();
+    ServiceSubSets = new Dictionary<string, List<string>>();
+  }
+
+  public void Validate()
+  {
+    ValidateServices();
+    ValidateServiceSubsets();
+    ValidateServiceSets();
+  }
+
+  private void ValidateServiceSets()
+  {
+    foreach (var set in ServiceSets)
+    {
+      set.Value.Validate(set.Key, this);
+    }
+  }
+
+  private void ValidateServiceSubsets()
+  {
+    foreach (var subset in ServiceSubSets)
+    {
+      foreach (var service in subset.Value)
+      {
+        if (!Services.ContainsKey(service))
+        {
+          ValidationException(subset.Key, "unknown service name in subset");
+        }
+      }
+    }
+  }
+
+  private void ValidateServices()
+  {
+    foreach (var service in Services)
+    {
+      service.Value.Validate(service.Key);
+    }
+  }
+
+  public static void ValidationException(string serviceName, string message)
+  {
+    throw new InvalidDataException($"Validation exception in {serviceName}: {message}");
+  }
+}
+
+public class ServiceSet
+{
+  public List<string> Services { get; set; }
+
+  public List<string> Includes { get; set; }
+
+  public ServiceSet()
+  {
+    Services = new List<string>();
+    Includes = new List<string>();
+  }
+
+  public void Validate(string setKey, Script script)
+  {
+    foreach (var include in Includes)
+    {
+      if (!script.ServiceSubSets.ContainsKey(include))
+      {
+        Script.ValidationException(setKey, "unknown service subset in includes");
+      }
+    }
+
+    foreach (var service in Services)
+    {
+      if (!script.Services.ContainsKey(service))
+      {
+        Script.ValidationException(setKey, "unknown service name");
+      }
+    }
+  }
+
+  public IEnumerable<string> GetServices(Script script)
+  {
+    return Services.Union(ExpandIncludes(script.ServiceSubSets));
+  }
+
+  private IEnumerable<string> ExpandIncludes(Dictionary<string, List<string>> serviceSubsets)
+  {
+    return Includes.Select(include => serviceSubsets[include]).SelectMany(set => set);
+  }
+}
+
+public class YAMLService
+{
+  public Dictionary<string, ServiceScript> Scripts { get; set; }
+  public bool Disabled { get; set; }
+
+  public YAMLService()
+  {
+    Scripts = new Dictionary<string, ServiceScript>();
+  }
+
+  internal void Validate(string serviceName)
+  {
+    foreach (var script in Scripts)
+    {
+      script.Value.Validate(serviceName);
+    }
+  }
+}
+
+public class ServiceScript
+{
+  public string Workdir { get; set; }
+  public List<string> Commands { get; set; }
+  [YamlMember(Alias = "windows", ApplyNamingConventions = false)]
+  public Dictionary<string, ScriptWindow> ScriptWindows { get; set; }
+  [YamlMember(Alias = "start_delay", ApplyNamingConventions = false)]
+  public int StartDelay { get; set; }
+  [YamlMember(Alias = "wait_for_ports", ApplyNamingConventions = false)]
+  public List<int> WaitForPorts { get; set; }
+
+  public ServiceScript()
+  {
+    Workdir = "";
+    Commands = new List<string>();
+    ScriptWindows = new Dictionary<string, ScriptWindow>();
+    WaitForPorts = new List<int>();
+  }
+
+  internal void Validate(string serviceName)
+  {
+    if (Workdir.Length == 0)
+    {
+      Script.ValidationException(serviceName, "missing or empty script working directory");
+    }
+    if (Commands.Count == 0)
+    {
+      Script.ValidationException(serviceName, "missing or empty script commands list");
+    }
+    if (ScriptWindows.Count == 0)
+      Script.ValidationException(serviceName, "service script has no output windows");
+    ValidateScriptWindows(serviceName);
+  }
+
+  private void ValidateScriptWindows(string serviceName)
+  {
+    var consolePresent = false;
+    foreach (var window in ScriptWindows)
+    {
+      window.Value.Validate(serviceName);
+      if (Service.IsConsoleWindow(window.Value))
+        consolePresent = true;
+    }
+    if (!consolePresent)
+      Script.ValidationException(serviceName, "console window must be present in the window list");
+  }
+
+  public string CreateBatchFile()
+  {
+    var fileName = Path.GetTempPath() + Guid.NewGuid() + ".bat";
+    using var w = new StreamWriter(fileName, false);
+    foreach (var line in Commands)
+      w.WriteLine(line);
+    return fileName;
+  }
+}
+
+public class ScriptWindow
+{
+  public string Type { get; set; }
+  public string? Parameters { get; set; }
+
+  public ScriptWindow()
+  {
+    Type = "";
+  }
+
+  public void Validate(string serviceName)
+  {
+    if (Type.Length == 0)
+    {
+      Script.ValidationException(serviceName, "missing or empty script window type");
+    }
+    if (!Service.IsValidWindowType(Type))
+      Script.ValidationException(serviceName, "unknown window type");
+  }
+}

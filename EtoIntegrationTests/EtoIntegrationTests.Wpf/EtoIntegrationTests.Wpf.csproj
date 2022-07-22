@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>WinExe</OutputType>
+        <TargetFramework>net6.0-windows</TargetFramework>
+        <LangVersion>default</LangVersion>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\EtoIntegrationTests\EtoIntegrationTests.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Eto.Platform.Wpf" Version="2.7.0" />
+    </ItemGroup>
+
+</Project>
