@@ -1,6 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using Cassandra;
 using Eto.Forms;
 
@@ -71,19 +71,107 @@ class CassandraClient : StackLayout
         .WithPort(_port)
         .Build();
       using var session = cluster.Connect();
+      _messages.Items.Add("Connected to database...");
       var tableNames = session
         .Execute($"SELECT * FROM system_schema.tables WHERE keyspace_name = '{_dbName}'")
         .Select(row => row.GetValue<string>("table_name"));
       _tabs.Pages.Clear();
+      _messages.Items.Clear();
       foreach (var tableName in tableNames)
       {
-        
+        _tabs.Pages.Add(BuildTabPage(session, tableName));
       }
     }
     catch (Exception exception)
     {
-      Console.WriteLine(exception);
-      throw;
+      _messages.Items.Add(exception.Message);
     }
+  }
+
+  private TabPage BuildTabPage(ISession session, string tableName)
+  {
+    return new TabPage { Text = tableName, Content = BuildPageContent(session, tableName) };
+  }
+
+  private Control BuildPageContent(ISession session, string tableName)
+  {
+    var content = new TreeGridView();
+    var rows = session.Execute($"select * from {_dbName}.{tableName}");
+
+    int idx = 0;
+    foreach (var column in rows.Columns)
+    {
+      content.Columns.Add(new GridColumn
+      {
+        HeaderText = column.Name,
+        DataCell = new TextBoxCell
+        {
+          Binding = new CassandraColumnBinding(idx)
+        }
+      });
+      idx++;
+    }
+
+    content.DataStore = new CassandraDataStore(rows);
+
+    return content;
+  }
+}
+
+internal class CassandraColumnBinding : IIndirectBinding<string>
+{
+  private readonly int _idx;
+  public CassandraColumnBinding(int idx)
+  {
+    _idx = idx;
+  }
+
+  public void Unbind()
+  {
+    throw new NotImplementedException();
+  }
+
+  public void Update(BindingUpdateMode mode = BindingUpdateMode.Source)
+  {
+  }
+
+  public string GetValue(object dataItem)
+  {
+    return (dataItem as CassandraTreeGridItem)![_idx];
+  }
+
+  public void SetValue(object dataItem, string value)
+  {
+    throw new NotImplementedException();
+  }
+}
+
+internal class CassandraDataStore : ITreeGridStore<CassandraTreeGridItem>
+{
+  public CassandraDataStore(RowSet rows)
+  {
+    _rows = rows.Select(row => new CassandraTreeGridItem(row)).ToList();
+  }
+
+  public int Count => _rows.Count;
+
+  private readonly List<CassandraTreeGridItem> _rows;
+
+  public CassandraTreeGridItem this[int index] => _rows[index];
+}
+
+internal class CassandraTreeGridItem : ITreeGridItem
+{
+  public bool Expanded { get; set; }
+  public bool Expandable => false;
+  public ITreeGridItem? Parent { get; set; }
+  
+  public string this[int index] => _row[index].ToString() ?? "null";
+
+  private readonly Row _row;
+  
+  public CassandraTreeGridItem(Row row)
+  {
+    _row = row;
   }
 }
