@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text;
 using Cassandra;
 using Eto.Forms;
 
@@ -33,9 +35,30 @@ class CassandraClient : StackLayout
       Text = "Refresh"
     };
     refreshButton.Click += RefreshButtonOnClick;
+    var runCQLButton = new Button
+    {
+      Text = "Run CQL"
+    };
+    runCQLButton.Click += RunCQLButtonOnClick;
     Items.Add(new StackLayoutItem
     {
-      Control = refreshButton
+      Control = new StackLayout
+      {
+        Orientation = Orientation.Horizontal,
+        Items =
+        {
+          new StackLayoutItem
+          {
+            Control = refreshButton,
+            Expand = true
+          },
+          new StackLayoutItem
+          {
+          Control = runCQLButton,
+          Expand = true
+        }
+        }
+      }
     });
     Items.Add(new StackLayoutItem
     {
@@ -62,8 +85,56 @@ class CassandraClient : StackLayout
     _dbName = parts[2];
   }
 
+  private void RunCQLButtonOnClick(object? sender, EventArgs e)
+  {
+    var dialog = new OpenFileDialog();
+    dialog.MultiSelect = true;
+    dialog.Directory = new Uri(Directory.GetCurrentDirectory());
+    
+    try
+    {
+      if (dialog.ShowDialog(this) == DialogResult.Ok)
+      {
+        _messages.Items.Clear();
+        var cluster = Cluster.Builder()
+          .AddContactPoint(_hostName)
+          .WithPort(_port)
+          .Build();
+        using var session = cluster.Connect();
+        _messages.Items.Add("Connected to database...");
+        session.ChangeKeyspace(_dbName);
+        foreach (var fileName in dialog.Filenames)
+        {
+          _messages.Items.Add($"Executing {fileName}");
+          var sb = new StringBuilder();
+          foreach (var line in File.ReadLines(fileName))
+          {
+            var trimmed = line.Trim();
+            if (trimmed.Length == 0 || trimmed.StartsWith("--"))
+              continue;
+            if (trimmed.Contains(';'))
+            {
+              sb.Append(trimmed);
+              var statement = sb.ToString();
+              _messages.Items.Add(statement);
+              session.Execute(statement);
+              sb.Clear();
+            }
+            else
+              sb.Append(trimmed);
+          }
+        }
+      }
+    }
+    catch (Exception exception)
+    {
+      _messages.Items.Add(exception.Message);
+    }
+  }
+
   private void RefreshButtonOnClick(object? sender, EventArgs e)
   {
+    _messages.Items.Clear();
     try
     {
       var cluster = Cluster.Builder()
@@ -76,7 +147,6 @@ class CassandraClient : StackLayout
         .Execute($"SELECT * FROM system_schema.tables WHERE keyspace_name = '{_dbName}'")
         .Select(row => row.GetValue<string>("table_name"));
       _tabs.Pages.Clear();
-      _messages.Items.Clear();
       foreach (var tableName in tableNames)
       {
         _tabs.Pages.Add(BuildTabPage(session, tableName));
