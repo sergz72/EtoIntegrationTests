@@ -7,7 +7,7 @@ namespace EtoIntegrationTests
   public class MainForm : Form
   {
     private Scripts scriptsView;
-    private ButtonToolItem startButton, stopButton, reloadScriptsButton;
+    private ButtonToolItem startButton, stopButton, reloadScriptsButton, clearConsoleButton;
     private StackLayout panel1;
     private Label scriptsLabel, tasksLabel;
     private Splitter panel2;
@@ -33,6 +33,12 @@ namespace EtoIntegrationTests
         Enabled = false
       };
       stopButton.Click += StopButtonOnClick;
+      clearConsoleButton = new ButtonToolItem
+      {
+        Text = "Clear consoles",
+        Enabled = false
+      };
+      clearConsoleButton.Click += ClearConsoleButtonOnClick;
 
       ToolBar = new ToolBar
       {
@@ -42,7 +48,9 @@ namespace EtoIntegrationTests
           new SeparatorToolItem(),
           startButton,
           new SeparatorToolItem(),
-          stopButton
+          stopButton,
+          new SeparatorToolItem(),
+          clearConsoleButton
         }
       };
     }
@@ -246,6 +254,10 @@ namespace EtoIntegrationTests
       {
         StopServices(scriptsView.SelectedItem as ScriptsTreeItem);
       }
+    }
+    
+    private void ClearConsoleButtonOnClick(object? sender, EventArgs e)
+    {
     }
   }
 }

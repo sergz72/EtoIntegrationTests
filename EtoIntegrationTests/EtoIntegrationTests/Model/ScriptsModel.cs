@@ -112,10 +112,14 @@ public class YAMLService
 {
   public Dictionary<string, ServiceScript> Scripts { get; set; }
   public bool Disabled { get; set; }
+  
+  [YamlMember(Alias = "url_for_tests", ApplyNamingConventions = false)]
+  public string UrlForTests { get; set; }
 
   public YAMLService()
   {
     Scripts = new Dictionary<string, ServiceScript>();
+    UrlForTests = "";
   }
 
   internal void Validate(string serviceName)
@@ -138,12 +142,16 @@ public class ServiceScript
   [YamlMember(Alias = "wait_for_ports", ApplyNamingConventions = false)]
   public List<int> WaitForPorts { get; set; }
 
+  [YamlMember(Alias = "env_file", ApplyNamingConventions = false)]
+  public string EnvFile { get; set; }
+
   public ServiceScript()
   {
     Workdir = "";
     Commands = new List<string>();
     ScriptWindows = new Dictionary<string, ScriptWindow>();
     WaitForPorts = new List<int>();
+    EnvFile = "";
   }
 
   internal void Validate(string serviceName)
