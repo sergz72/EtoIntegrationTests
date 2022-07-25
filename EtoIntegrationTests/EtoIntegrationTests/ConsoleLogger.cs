@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using Eto.Drawing;
 using Eto.Forms;
 
@@ -54,6 +55,11 @@ public class ConsoleLogger: TreeGridView
       Application.Instance.Invoke(ReloadData);
     }
   }
+
+  public List<string> GetLogs()
+  {
+    return _dataStore.GetLines();
+  }
 }
 
 class LogDataStore : ITreeGridStore<LogItem>
@@ -83,6 +89,10 @@ class LogDataStore : ITreeGridStore<LogItem>
     _items.Add(new LogItem(line, false, true));
   }
 
+  public List<string> GetLines()
+  {
+    return _items.Select(item => item.Text).ToList();
+  }
 }
 
 class LogItem : ITreeGridItem<LogItem>

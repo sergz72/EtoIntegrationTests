@@ -8,6 +8,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EtoIntegrationTests.Mac", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EtoIntegrationTests.Wpf", "EtoIntegrationTests\EtoIntegrationTests.Wpf\EtoIntegrationTests.Wpf.csproj", "{CF6227FF-3597-4A2E-BCA5-E3186DABA6C6}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EtoIntegrationTests.Interfaces", "EtoIntegrationTests\EtoIntegrationTests.Interfaces\EtoIntegrationTests.Interfaces.csproj", "{CFC9D4F2-9FA5-4B28-A31A-6F8CD8CC1233}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

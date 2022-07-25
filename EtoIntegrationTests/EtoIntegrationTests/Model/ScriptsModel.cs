@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using EtoIntegrationTests.Interfaces;
 using YamlDotNet.Serialization;
 
 namespace EtoIntegrationTests.Model;
@@ -14,13 +15,18 @@ public class Script
   [YamlMember(Alias = "service_subsets", ApplyNamingConventions = false)]
   public Dictionary<string, List<string>> ServiceSubSets { get; set; }
 
-  public Dictionary<string, YAMLService> Services { get; set; }
+  [YamlMember(Alias = "local_service", ApplyNamingConventions = false)]
+  public Dictionary<string, YAMLLocalService> LocalServices { get; set; }
+
+  [YamlMember(Alias = "test_parameters", ApplyNamingConventions = false)]
+  public Parameters TestParameters { get; set; }
 
   public Script()
   {
     ServiceSets = new Dictionary<string, ServiceSet>();
-    Services = new Dictionary<string, YAMLService>();
+    LocalServices = new Dictionary<string, YAMLLocalService>();
     ServiceSubSets = new Dictionary<string, List<string>>();
+    TestParameters = new Parameters();
   }
 
   public void Validate()
@@ -44,7 +50,7 @@ public class Script
     {
       foreach (var service in subset.Value)
       {
-        if (!Services.ContainsKey(service))
+        if (!LocalServices.ContainsKey(service))
         {
           ValidationException(subset.Key, "unknown service name in subset");
         }
@@ -54,7 +60,7 @@ public class Script
 
   private void ValidateServices()
   {
-    foreach (var service in Services)
+    foreach (var service in LocalServices)
     {
       service.Value.Validate(service.Key);
     }
@@ -90,7 +96,7 @@ public class ServiceSet
 
     foreach (var service in Services)
     {
-      if (!script.Services.ContainsKey(service))
+      if (!script.LocalServices.ContainsKey(service))
       {
         Script.ValidationException(setKey, "unknown service name");
       }
@@ -108,7 +114,7 @@ public class ServiceSet
   }
 }
 
-public class YAMLService
+public class YAMLLocalService
 {
   public Dictionary<string, ServiceScript> Scripts { get; set; }
   public bool Disabled { get; set; }
@@ -116,7 +122,7 @@ public class YAMLService
   [YamlMember(Alias = "url_for_tests", ApplyNamingConventions = false)]
   public string UrlForTests { get; set; }
 
-  public YAMLService()
+  public YAMLLocalService()
   {
     Scripts = new Dictionary<string, ServiceScript>();
     UrlForTests = "";
@@ -210,5 +216,101 @@ public class ScriptWindow
     }
     if (!Service.IsValidWindowType(Type))
       Script.ValidationException(serviceName, "unknown window type");
+  }
+}
+
+public class Parameters: ITestParameters
+{
+  public KafkaParameters Kafka { get; set; }
+  public CassandraParameters Cassandra { get; set; }
+
+  public Parameters()
+  {
+    Kafka = new KafkaParameters();
+    Cassandra = new CassandraParameters();
+  }
+
+  public IKafkaParameters GetKafkaParameters()
+  {
+    return Kafka;
+  }
+
+  public ICassandraParameters GetCassandraParameters()
+  {
+    return Cassandra;
+  }
+}
+
+public class KafkaParameters: IKafkaParameters
+{
+  public string Host { get; set; }
+  
+  public Dictionary<string, KafkaTopicParameters> Topics { get; set; }
+
+  public KafkaParameters()
+  {
+    Host = "";
+    Topics = new Dictionary<string, KafkaTopicParameters>();
+  }
+
+  public string GetHost()
+  {
+    return Host;
+  }
+
+  public Dictionary<string, IKafkaTopicParameters> GetTopics()
+  {
+    return Topics.ToDictionary(topic => topic.Key, topic => topic.Value as IKafkaTopicParameters);
+  }
+}
+
+public class KafkaTopicParameters: IKafkaTopicParameters
+{
+  public string Name { get; set; }
+  public string Group { get; set; }
+
+  public KafkaTopicParameters()
+  {
+    Name = "";
+    Group = "";
+  }
+
+  public string GetName()
+  {
+    return Name;
+  }
+
+  public string GetGroup()
+  {
+    return Group;
+  }
+}
+
+public class CassandraParameters: ICassandraParameters
+{
+  public string Host { get; set; }
+  public int Port { get; set; }
+  [YamlMember(Alias = "db_name", ApplyNamingConventions = false)]
+  public string DbName { get; set; }
+
+  public CassandraParameters()
+  {
+    Host = "";
+    DbName = "";
+  }
+
+  public string GetHost()
+  {
+    return Host;
+  }
+
+  public int GetPort()
+  {
+    return Port;
+  }
+
+  public string GetDbName()
+  {
+    return DbName;
   }
 }

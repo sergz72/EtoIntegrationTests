@@ -5,12 +5,13 @@ service_sets:
     services:
       - kafka
       - cassandra
+      - server
 
 service_subsets:
   stubs:
     - acms-stubs
 
-services:
+local_services:
   kafka:
     disabled: false
     scripts:
@@ -81,3 +82,32 @@ services:
         windows:
           console:
             type: console
+
+  server:
+    disabled: false
+    url_for_tests: localhost:8080
+    scripts:
+      server:
+        wait_for_ports: [9092,9042]
+        workdir: D:\projects\connectwise\GoLand\communicator\communicator-service\bin
+        env_file: D:\projects\connectwise\GoLand\communicator\communicator-service\.env
+        commands:
+          - platform-communicator-service.exe
+        windows:
+          console:
+            type: console
+
+test_parameters:
+  kafka:
+    host: 127.0.0.1:9092
+    topics:
+      communicator:
+        name: communicator
+        group: communicator_testconsumer
+      policy:
+        name: policy-engine-container-effective-policy-change
+        group: policy_testconsumer
+  cassandra:
+    host: 127.0.0.1
+    port: 9042
+    db_name: platform_communicator_db

@@ -8,10 +8,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using Eto.Forms;
 using EtoIntegrationTests.Model;
+using EtoIntegrationTests.Interfaces;
 
 namespace EtoIntegrationTests;
 
-public class Service
+public class Service: IService
 {
   private static readonly Dictionary<string, IPageBuilder> Builders = new()
   {
@@ -28,6 +29,7 @@ public class Service
   public static bool IsConsoleWindow(ScriptWindow window) => window.Type == "console";
 
   public readonly string Name;
+  public readonly string UrlForTests;
   public bool Disabled { get; }
   public bool CanBeStarted => !Disabled;
 
@@ -47,7 +49,7 @@ public class Service
   private string? _batchFileName;
   private readonly int _startDelay;
 
-  public Service(string serviceName, ServiceScript sscript, bool disabled)
+  public Service(string serviceName, ServiceScript sscript, bool disabled, string urlForTests)
   {
     Name = serviceName;
     _sscript = sscript;
@@ -55,6 +57,7 @@ public class Service
     _logger = new ConsoleLogger();
     _startDelay = sscript.StartDelay * 1000;
     Pages = BuildPages(sscript.ScriptWindows, _logger);
+    UrlForTests = urlForTests;
   }
 
   private List<TabPage> BuildPages(Dictionary<string, ScriptWindow> windows, ConsoleLogger logger)
@@ -70,9 +73,9 @@ public class Service
       return serviceMap[serviceName];
     }
 
-    var service = script.Services[serviceName];
+    var service = script.LocalServices[serviceName];
     var services = service.Scripts
-      .Select(s => new Service(s.Key, s.Value, service.Disabled)).ToList();
+      .Select(s => new Service(s.Key, s.Value, service.Disabled, service.UrlForTests)).ToList();
     serviceMap[serviceName] = services;
     return services;
   }
@@ -171,6 +174,21 @@ public class Service
     }
     _logger.Clear();
     StatusChangeHandler?.StatusChanged();
+  }
+
+  public List<string> GetLogs()
+  {
+    return _logger.GetLogs();
+  }
+
+  public void ClearLogs()
+  {
+    _logger.Clear();
+  }
+
+  public string GetUrlForTests()
+  {
+    return UrlForTests;
   }
 }
 
