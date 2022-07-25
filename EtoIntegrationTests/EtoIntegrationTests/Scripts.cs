@@ -56,6 +56,7 @@ namespace EtoIntegrationTests
   interface IScriptsTreeItemHandler
   {
     string GetText();
+    string? GetFolder();
     List<ScriptsTreeItem> GetChildren(ScriptsTreeItem parent);
     Dictionary<string,List<Service>> GetServices();
   }
@@ -63,11 +64,13 @@ namespace EtoIntegrationTests
   class ScriptsHandler : IScriptsTreeItemHandler
   {
     private readonly string _name, _scriptName;
+    private readonly string? _folder;
     private readonly Dictionary<string, List<Service>> _serviceMap = new();
 
     public ScriptsHandler(string scriptName)
     {
       _scriptName = scriptName;
+      _folder = Path.GetDirectoryName(scriptName);
       _name = Path.GetFileNameWithoutExtension(scriptName);
     }
     
@@ -76,6 +79,11 @@ namespace EtoIntegrationTests
       return _name;
     }
 
+    public string? GetFolder()
+    {
+      return null;
+    }
+    
     public List<ScriptsTreeItem> GetChildren(ScriptsTreeItem parent)
     {
       var input = new StringReader(File.ReadAllText(_scriptName));
@@ -88,7 +96,7 @@ namespace EtoIntegrationTests
       script.Validate();
       
       return script.ServiceSets.Select(set => 
-        new ScriptsTreeItem(new ServiceSetHandler(set.Key, set.Value, _serviceMap, script), parent)).ToList();
+        new ScriptsTreeItem(new ServiceSetHandler(set.Key, set.Value, _serviceMap, script, _folder), parent)).ToList();
     }
 
     public Dictionary<string, List<Service>> GetServices()
@@ -100,11 +108,13 @@ namespace EtoIntegrationTests
   class ServiceSetHandler : IScriptsTreeItemHandler
   {
     private readonly string _name;
+    private readonly string? _folder;
     private readonly Dictionary<string, List<Service>> _services;
     
-    public ServiceSetHandler(string name, ServiceSet set, Dictionary<string, List<Service>> serviceMap, Script script)
+    public ServiceSetHandler(string name, ServiceSet set, Dictionary<string, List<Service>> serviceMap, Script script, string? folder)
     {
       _name = name;
+      _folder = folder;
       _services = set.GetServices(script).Select(service => KeyValuePair.Create(service, Service.Build(service, serviceMap, script)))
         .ToDictionary(service => service.Key, service => service.Value);
     }
@@ -114,6 +124,11 @@ namespace EtoIntegrationTests
       return _name;
     }
 
+    public string? GetFolder()
+    {
+      return _folder;
+    }
+    
     public List<ScriptsTreeItem> GetChildren(ScriptsTreeItem parent)
     {
       return new List<ScriptsTreeItem>();
@@ -128,6 +143,7 @@ namespace EtoIntegrationTests
   class ScriptsTreeItem : ITreeGridItem<ScriptsTreeItem>, IStartable
   {
     public string Text => _handler.GetText();
+    public string? Folder => _handler.GetFolder();
     public bool Expanded { get; set; }
     public bool Expandable => _children.Count > 0;
     public ITreeGridItem? Parent { get; set; }

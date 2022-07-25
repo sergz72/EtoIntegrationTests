@@ -180,6 +180,7 @@ namespace EtoIntegrationTests
     {
       var item = _scriptsView.SelectedItem as ScriptsTreeItem;
       _tasks.ShowServices(item?.GetServices());
+      _tests.ShowTests(item?.Folder);
       if (item is not { Expandable: false })
       {
         _stopButton.Enabled = false;

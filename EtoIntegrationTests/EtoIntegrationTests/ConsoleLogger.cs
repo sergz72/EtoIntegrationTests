@@ -11,6 +11,7 @@ public class ConsoleLogger: TreeGridView
   
   public ConsoleLogger()
   {
+    ShowHeader = false;
     _dataStore = new LogDataStore();
     DataStore = _dataStore;
     Columns.Add(new GridColumn

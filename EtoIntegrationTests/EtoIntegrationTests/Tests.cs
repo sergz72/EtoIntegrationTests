@@ -1,19 +1,27 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Runtime.Loader;
 using Eto.Forms;
+using EtoIntegrationTests.Interfaces;
+using EtoIntegrationTests.Model;
 
 namespace EtoIntegrationTests;
 
-public class Tests: StackLayout
+public class Tests: StackLayout, ITestLogger
 {
-  private readonly ListBox _testsList;
-  private readonly TreeGridView _testsResults;
+  private readonly TestList _testsList;
+  private readonly ConsoleLogger _testsResults;
   private readonly Button _runAllButton;
   
   public Tests()
   {
-    _testsList = new ListBox();
+    _testsList = new TestList();
     _testsList.Width = 300;
-    _testsResults = new TreeGridView();
+    _testsList.SelectedItemChanged += TestsListOnSelectedItemChanged;
+    _testsResults = new ConsoleLogger();
     _runAllButton = new Button
     {
       Text = "Run all tests",
@@ -80,11 +88,49 @@ public class Tests: StackLayout
     };
   }
 
+  public void ShowTests(string? folder, Parameters parameters, Dictionary<string, IService> services)
+  {
+    if (folder != null)
+    {
+      foreach (var file in Directory.GetFiles(folder, "*.dll"))
+      {
+        try
+        {
+          var alc = new AssemblyLoadContext("test", true);
+
+          Assembly a = alc.LoadFromAssemblyPath(Path.GetFullPath(file));
+          foreach (var type in a.GetTypes())
+          {
+            if (type.GetInterfaces().Contains(typeof(ITests)))
+            {
+              var t = Activator.CreateInstance(type) as ITests;
+              var tests = t.Init(parameters, services, this);
+            }
+          }
+          alc.Unload();
+        }
+        catch (Exception e)
+        {
+          _testsResults.AddErrorLine(e.Message);
+        }
+      }
+    }
+  }
+  
+  private void TestsListOnSelectedItemChanged(object? sender, EventArgs e)
+  {
+  }
+
   private void RunButtonOnClick(object? sender, EventArgs e)
   {
   }
 
   private void RunAllButtonOnClick(object? sender, EventArgs e)
   {
+  }
+
+  public void Log(string line)
+  {
+    _testsResults.AddLine(line);
   }
 }

@@ -34,6 +34,11 @@ namespace EtoIntegrationTests.Interfaces
     string GetDbName();
   }
 
+  public interface ITestLogger
+  {
+    void Log(string line);
+  }
+  
   public struct TestResult
   {
     public static readonly TestResult Successful = new TestResult{
@@ -56,6 +61,6 @@ namespace EtoIntegrationTests.Interfaces
   
   public interface ITests
   {
-    Dictionary<string, TestDelegate> Init(ITestParameters parameters, Dictionary<string, IService> services);
+    Dictionary<string, TestDelegate> Init(ITestParameters parameters, Dictionary<string, IService> services, ITestLogger logger);
   }
 }
