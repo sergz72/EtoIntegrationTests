@@ -102,6 +102,7 @@ class TasksItem : ITreeGridItem<TasksItem>, IStartable
     Text = name;
     _services = services.Select(service => new TasksItem(service)).ToList();
     _isStarted = false;
+    Expanded = true;
   }
 
   public TasksItem(Service service)

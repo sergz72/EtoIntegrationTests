@@ -129,9 +129,9 @@ public class Service: IService
 
       p.StartInfo.WorkingDirectory = _sscript.Workdir;
       p.StartInfo.CreateNoWindow = true;
-      //p.StartInfo.UseShellExecute = true;
       p.StartInfo.RedirectStandardOutput = true;
       p.StartInfo.RedirectStandardError = true;
+      BuildEnvironment(p.StartInfo);
       p.Exited += delegate
       {
         _process = null;
@@ -154,6 +154,26 @@ public class Service: IService
         _logger.AddErrorLine(e.Message);
       }
     });
+  }
+
+  private void BuildEnvironment(ProcessStartInfo pStartInfo)
+  {
+    if (_sscript.EnvFile.Length > 0)
+    {
+      foreach (var line in File.ReadLines(_sscript.EnvFile))
+      {
+        var trimmed = line.Trim().Replace("'", "");
+        if (trimmed.Length == 0 || trimmed.StartsWith("#"))
+          continue;
+        var idx = trimmed.IndexOf('=');
+        if (idx > 0)
+        {
+          var name = trimmed.Substring(0, idx);
+          var value = trimmed.Substring(idx + 1);
+          pStartInfo.Environment.Add(name, value);
+        }
+      }
+    }
   }
 
   private bool WaitForPort(int port)

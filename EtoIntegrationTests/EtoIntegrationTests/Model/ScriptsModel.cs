@@ -15,7 +15,7 @@ public class Script
   [YamlMember(Alias = "service_subsets", ApplyNamingConventions = false)]
   public Dictionary<string, List<string>> ServiceSubSets { get; set; }
 
-  [YamlMember(Alias = "local_service", ApplyNamingConventions = false)]
+  [YamlMember(Alias = "local_services", ApplyNamingConventions = false)]
   public Dictionary<string, YAMLLocalService> LocalServices { get; set; }
 
   [YamlMember(Alias = "test_parameters", ApplyNamingConventions = false)]

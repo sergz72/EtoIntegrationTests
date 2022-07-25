@@ -25,9 +25,10 @@ namespace EtoIntegrationTests
     public void Reload()
     {
       _dataStore.Clear();
-      foreach (var script in Directory.GetFiles("scripts"))
+      foreach (var folder in Directory.GetDirectories("scripts"))
       {
-        _dataStore.Add(script);
+        foreach (string script in Directory.GetFiles(folder, "*.yml"))
+          _dataStore.Add(script);
       }
       ReloadData();
     }
