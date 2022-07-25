@@ -13,6 +13,7 @@ namespace EtoIntegrationTests
     private readonly ScriptsDataStore _dataStore;
     public Scripts()
     {
+      ShowHeader = false;
       _dataStore = new ScriptsDataStore();
       DataStore = _dataStore;
       AllowEmptySelection = false;

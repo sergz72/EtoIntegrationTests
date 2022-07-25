@@ -11,6 +11,7 @@ public class Tasks: TreeGridView, IStatusChange
   
   public Tasks()
   {
+    ShowHeader = false;
     _dataStore = new TasksDataStore();
     DataStore = _dataStore;
     Columns.Add(new GridColumn

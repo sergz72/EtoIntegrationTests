@@ -33,4 +33,29 @@ namespace EtoIntegrationTests.Interfaces
     int GetPort();
     string GetDbName();
   }
+
+  public struct TestResult
+  {
+    public static readonly TestResult Successful = new TestResult{
+      Success = true
+    };
+    public bool Success;
+    public string ErrorMessage;
+
+    public static TestResult Failure(string format, params object[] parameters)
+    {
+      return new TestResult
+      {
+        Success = false,
+        ErrorMessage = string.Format(format, parameters)
+      };
+    }
+  }
+  
+  public delegate TestResult TestDelegate();
+  
+  public interface ITests
+  {
+    Dictionary<string, TestDelegate> Init(ITestParameters parameters, Dictionary<string, IService> services);
+  }
 }

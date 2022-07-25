@@ -6,87 +6,87 @@ namespace EtoIntegrationTests
 {
   public class MainForm : Form
   {
-    private Scripts scriptsView;
-    private ButtonToolItem startButton, stopButton, reloadScriptsButton, clearConsoleButton;
-    private StackLayout panel1;
-    private Label scriptsLabel, tasksLabel;
-    private Splitter panel2;
-    private Tasks tasks;
-    private TabControl actionsPanel;
+    private Scripts _scriptsView;
+    private ButtonToolItem _startButton, _stopButton, _reloadScriptsButton, _clearConsoleButton;
+    private StackLayout _panel1;
+    private Label _scriptsLabel, _tasksLabel;
+    private Tasks _tasks;
+    private TabControl _actionsPanel;
+    private Tests _tests;
 
     private void InitToolbar()
     {
-      reloadScriptsButton = new ButtonToolItem
+      _reloadScriptsButton = new ButtonToolItem
       {
         Text = "Reload scripts"
       };
-      reloadScriptsButton.Click += delegate(object? sender, EventArgs args) { ReloadScripts(); };
-      startButton = new ButtonToolItem
+      _reloadScriptsButton.Click += delegate { ReloadScripts(); };
+      _startButton = new ButtonToolItem
       {
         Text = "Start",
         Enabled = false
       };
-      startButton.Click += StartButtonOnClick;
-      stopButton = new ButtonToolItem
+      _startButton.Click += StartButtonOnClick;
+      _stopButton = new ButtonToolItem
       {
         Text = "Stop",
         Enabled = false
       };
-      stopButton.Click += StopButtonOnClick;
-      clearConsoleButton = new ButtonToolItem
+      _stopButton.Click += StopButtonOnClick;
+      _clearConsoleButton = new ButtonToolItem
       {
         Text = "Clear consoles",
         Enabled = false
       };
-      clearConsoleButton.Click += ClearConsoleButtonOnClick;
+      _clearConsoleButton.Click += ClearConsoleButtonOnClick;
 
       ToolBar = new ToolBar
       {
         Items =
         {
-          reloadScriptsButton,
+          _reloadScriptsButton,
           new SeparatorToolItem(),
-          startButton,
+          _startButton,
           new SeparatorToolItem(),
-          stopButton,
+          _stopButton,
           new SeparatorToolItem(),
-          clearConsoleButton
+          _clearConsoleButton
         }
       };
     }
 
     private void InitPanel1()
     {
-      scriptsView = new Scripts();
-      scriptsView.SelectedItemChanged += ScriptsViewOnSelectedItemChanged;
-      scriptsLabel = new Label
+      _scriptsView = new Scripts();
+      _scriptsView.SelectedItemChanged += ScriptsViewOnSelectedItemChanged;
+      _scriptsLabel = new Label
       {
         Text = "Scripts"
       };
 
-      panel1 = new StackLayout
+      _panel1 = new StackLayout
       {
         Orientation = Orientation.Vertical,
         Items =
         {
-          scriptsLabel,
-          scriptsView
+          _scriptsLabel,
+          _scriptsView
         },
         HorizontalContentAlignment = HorizontalAlignment.Stretch,
         VerticalContentAlignment = VerticalAlignment.Stretch
       };
-      panel1.SizeChanged += (sender, args) =>
+      _panel1.SizeChanged += (_, _) =>
       {
-        if (scriptsView.Height != panel1.Height - scriptsLabel.Height)
-          scriptsView.Height = panel1.Height - scriptsLabel.Height;
+        if (_scriptsView.Height != _panel1.Height - _scriptsLabel.Height)
+          _scriptsView.Height = _panel1.Height - _scriptsLabel.Height;
       };
     }
 
     private StackLayout InitTasksPanel()
     {
-      tasks = new Tasks();
-      tasks.SelectedItemChanged += TasksOnSelectedIndexChanged;
-      tasksLabel = new Label
+      _tasks = new Tasks();
+      _tasks.SelectedItemChanged += TasksOnSelectedIndexChanged;
+      _tasksLabel = new Label
       {
         Text = "Tasks"
       };
@@ -95,16 +95,16 @@ namespace EtoIntegrationTests
         Orientation = Orientation.Vertical,
         Items =
         {
-          tasksLabel,
-          tasks
+          _tasksLabel,
+          _tasks
         },
         HorizontalContentAlignment = HorizontalAlignment.Stretch,
         VerticalContentAlignment = VerticalAlignment.Stretch
       };
-      tasksPanel.SizeChanged += (sender, args) =>
+      tasksPanel.SizeChanged += (_, _) =>
       {
-        if (tasks.Height != tasksPanel.Height - tasksLabel.Height)
-          tasks.Height = tasksPanel.Height - tasksLabel.Height;
+        if (_tasks.Height != tasksPanel.Height - _tasksLabel.Height)
+          _tasks.Height = tasksPanel.Height - _tasksLabel.Height;
       };
 
       return tasksPanel;
@@ -112,7 +112,7 @@ namespace EtoIntegrationTests
 
     private void InitActionsPanel()
     {
-      actionsPanel = new TabControl();
+      _actionsPanel = new TabControl();
     }
 
 #pragma warning disable CS8618
@@ -125,22 +125,40 @@ namespace EtoIntegrationTests
       InitPanel1();
       InitActionsPanel();
 
-      panel2 = new Splitter
+      var panel2 = new Splitter
       {
         Orientation = Orientation.Horizontal,
         Panel1 = InitTasksPanel(),
-        Panel2 = actionsPanel,
+        Panel2 = _actionsPanel,
         BackgroundColor = Colors.White,
         Panel1MinimumSize = 150
       };
+
+      _tests = new Tests();
       
-      Content = new Splitter
+      Content = new StackLayout
       {
-        Orientation = Orientation.Horizontal,
-        Panel1 = panel1,
-        Panel2 = panel2,
-        BackgroundColor = Colors.White,
-        Panel1MinimumSize = 150
+        Orientation = Orientation.Vertical,
+        HorizontalContentAlignment = HorizontalAlignment.Stretch,
+        Items = {
+          new StackLayoutItem
+          {
+            Control = new Splitter
+            {
+              Orientation = Orientation.Horizontal,
+              Panel1 = _panel1,
+              Panel2 = panel2,
+              BackgroundColor = Colors.White,
+              Panel1MinimumSize = 150
+            },
+            Expand = true
+          },
+          new StackLayoutItem
+          {
+            Control = _tests,
+            Expand = true
+          }
+        }
       };
 
       ReloadScripts();
@@ -151,7 +169,7 @@ namespace EtoIntegrationTests
     {
       try
       {
-        scriptsView.Reload();
+        _scriptsView.Reload();
       }
       catch (Exception e)
       {
@@ -160,50 +178,50 @@ namespace EtoIntegrationTests
     }
     private void ScriptsViewOnSelectedItemChanged(object? sender, EventArgs e)
     {
-      var item = scriptsView.SelectedItem as ScriptsTreeItem;
-      tasks.ShowServices(item?.GetServices());
+      var item = _scriptsView.SelectedItem as ScriptsTreeItem;
+      _tasks.ShowServices(item?.GetServices());
       if (item is not { Expandable: false })
       {
-        stopButton.Enabled = false;
-        startButton.Enabled = false;
+        _stopButton.Enabled = false;
+        _startButton.Enabled = false;
       }
       else
       {
         if (item.IsStarted)
         {
-          stopButton.Enabled = true;
-          startButton.Enabled = false;
+          _stopButton.Enabled = true;
+          _startButton.Enabled = false;
         }
         else
         {
-          stopButton.Enabled = false;
-          startButton.Enabled = true;
+          _stopButton.Enabled = false;
+          _startButton.Enabled = true;
         }
       }
     }
 
     private void TasksOnSelectedIndexChanged(object? sender, EventArgs e)
     {
-      var item = tasks.SelectedItem as TasksItem;
-      actionsPanel.Pages.Clear();
+      var item = _tasks.SelectedItem as TasksItem;
+      _actionsPanel.Pages.Clear();
       if (item is not { CanBeStarted: true })
       {
-        stopButton.Enabled = false;
-        startButton.Enabled = false;
+        _stopButton.Enabled = false;
+        _startButton.Enabled = false;
       }
       else
       {
-        item.Pages.ForEach(page => actionsPanel.Pages.Add(page));
+        item.Pages.ForEach(page => _actionsPanel.Pages.Add(page));
         
         if (item.IsStarted)
         {
-          stopButton.Enabled = true;
-          startButton.Enabled = false;
+          _stopButton.Enabled = true;
+          _startButton.Enabled = false;
         }
         else
         {
-          stopButton.Enabled = false;
-          startButton.Enabled = true;
+          _stopButton.Enabled = false;
+          _startButton.Enabled = true;
         }
       }
     }
@@ -234,25 +252,25 @@ namespace EtoIntegrationTests
 
     private void StartButtonOnClick(object? sender, EventArgs e)
     {
-      if (tasks.HasFocus)
+      if (_tasks.HasFocus)
       {
-        StartServices(tasks.SelectedItem as TasksItem);
+        StartServices(_tasks.SelectedItem as TasksItem);
       }
       else
       {
-        StartServices(scriptsView.SelectedItem as ScriptsTreeItem);
+        StartServices(_scriptsView.SelectedItem as ScriptsTreeItem);
       }
     }
     
     private void StopButtonOnClick(object? sender, EventArgs e)
     {
-      if (tasks.HasFocus)
+      if (_tasks.HasFocus)
       {
-        StopServices(tasks.SelectedItem as TasksItem);
+        StopServices(_tasks.SelectedItem as TasksItem);
       }
       else
       {
-        StopServices(scriptsView.SelectedItem as ScriptsTreeItem);
+        StopServices(_scriptsView.SelectedItem as ScriptsTreeItem);
       }
     }
     
