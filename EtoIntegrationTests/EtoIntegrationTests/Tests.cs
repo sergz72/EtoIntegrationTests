@@ -14,8 +14,11 @@ public class Tests: StackLayout, ITestLogger
 {
   private readonly TestList _testsList;
   private readonly ConsoleLogger _testsResults;
-  private readonly Button _runAllButton;
-  
+  private readonly Button _runAllButton, _runButton;
+  private string? _folder;
+  private ITestParameters? _parameters;
+  private Dictionary<string, IService>? _services;
+
   public Tests()
   {
     _testsList = new TestList();
@@ -28,12 +31,12 @@ public class Tests: StackLayout, ITestLogger
       Enabled = false
     };
     _runAllButton.Click += RunAllButtonOnClick;
-    var runButton = new Button
+    _runButton = new Button
     {
-      Text = "Run test",
+      Text = "Run tests",
       Enabled = false
     };
-    runButton.Click += RunButtonOnClick;
+    _runButton.Click += RunButtonOnClick;
 
     Orientation = Orientation.Vertical;
     HorizontalContentAlignment = HorizontalAlignment.Stretch;
@@ -52,7 +55,7 @@ public class Tests: StackLayout, ITestLogger
           },
           new StackLayoutItem
           {
-            Control = runButton,
+            Control = _runButton,
             Expand = true
           }
         }
@@ -88,45 +91,59 @@ public class Tests: StackLayout, ITestLogger
     };
   }
 
-  public void ShowTests(string? folder, Parameters parameters, Dictionary<string, IService> services)
+  private void TestsHandler(Action<Dictionary<string, TestDelegate>> handler)
   {
-    if (folder != null)
+    if (_folder == null)
+      return;
+    var testsFile = Directory.GetFiles(_folder, "*.dll").FirstOrDefault();
+    if (testsFile == null)
+      return;
+    try
     {
-      foreach (var file in Directory.GetFiles(folder, "*.dll"))
-      {
-        try
-        {
-          var alc = new AssemblyLoadContext("test", true);
+      var alc = new AssemblyLoadContext("test", true);
 
-          Assembly a = alc.LoadFromAssemblyPath(Path.GetFullPath(file));
-          foreach (var type in a.GetTypes())
-          {
-            if (type.GetInterfaces().Contains(typeof(ITests)))
-            {
-              var t = Activator.CreateInstance(type) as ITests;
-              var tests = t.Init(parameters, services, this);
-            }
-          }
-          alc.Unload();
-        }
-        catch (Exception e)
+      Assembly a = alc.LoadFromAssemblyPath(Path.GetFullPath(testsFile));
+      foreach (var type in a.GetTypes())
+      {
+        if (type.GetInterfaces().Contains(typeof(ITests)))
         {
-          _testsResults.AddErrorLine(e.Message);
+          var t = Activator.CreateInstance(type) as ITests;
+          var tests = t?.Init(_parameters, _services, this);
+          if (tests != null)
+            handler(tests);
         }
       }
+      alc.Unload();
     }
+    catch (Exception e)
+    {
+      _testsResults.AddErrorLine(e.Message);
+    }
+  }
+  
+  public void ShowTests(string? folder, ITestParameters? parameters, Dictionary<string, IService>? services)
+  {
+    _folder = folder;
+    _parameters = parameters;
+    _services = services;
+    TestsHandler(tests => _testsList.ShowTests(tests));
+    _runAllButton.Enabled = _testsList.IsNotEmpty();
+    _runButton.Enabled = false;
   }
   
   private void TestsListOnSelectedItemChanged(object? sender, EventArgs e)
   {
+    _runButton.Enabled = _testsList.SelectedItems.Any();
   }
 
   private void RunButtonOnClick(object? sender, EventArgs e)
   {
+    TestsHandler(tests => _testsList.RunSelectedTests(tests, _testsResults));
   }
 
   private void RunAllButtonOnClick(object? sender, EventArgs e)
   {
+    TestsHandler(tests => _testsList.RunAllTests(tests, _testsResults));
   }
 
   public void Log(string line)

@@ -14,22 +14,46 @@ public class TestList: TreeGridView
   public TestList()
   {
     ShowHeader = false;
+    AllowMultipleSelection = true;
     _dataStore = new TestsDataStore();
     DataStore = _dataStore;
     Columns.Add(new GridColumn
     {
       DataCell = new ImageTextCell
       {
-        TextBinding = new DelegateBinding<TasksItem, string>(r => r.Text),
-        ImageBinding = new DelegateBinding<TasksItem, Image>(r => r.ItemImage)
+        TextBinding = new DelegateBinding<TestItem, string>(r => r.Text),
+        ImageBinding = new DelegateBinding<TestItem, Image>(r => r.ItemImage)
       }
     });
   }
 
-  public void RunAllTests(ConsoleLogger logger)
+  public bool IsNotEmpty()
   {
-    _dataStore.RunAllTests(logger);
+    return _dataStore.IsNotEmpty();
+  }
+  
+  public void ShowTests(Dictionary<string, TestDelegate> tests)
+  {
+    _dataStore.Clear();
+    foreach (var test in tests)
+      _dataStore.Add(test.Key);
     ReloadData();
+  }
+  
+  public void RunAllTests(Dictionary<string, TestDelegate> tests, ConsoleLogger logger)
+  {
+    _dataStore.RunAllTests(tests, logger);
+    ReloadData();
+  }
+  
+  public void RunSelectedTests(Dictionary<string, TestDelegate> tests, ConsoleLogger logger)
+  {
+    foreach (var item in SelectedItems)
+    {
+      var ti = item as TestItem;
+      ti?.Run(tests[ti.Text], logger);
+      ReloadData();
+    }
   }
 }
 
@@ -40,11 +64,26 @@ class TestsDataStore : ITreeGridStore<TestItem>
 
   public TestItem this[int index] => _items[index];
 
-  internal void RunAllTests(ConsoleLogger logger)
+  public void Clear()
+  {
+    _items.Clear();
+  }
+
+  public void Add(string testName)
+  {
+    _items.Add(new TestItem(testName));
+  }
+
+  public bool IsNotEmpty()
+  {
+    return _items.Count > 0;
+  }
+  
+  internal void RunAllTests(Dictionary<string, TestDelegate> tests, ConsoleLogger logger)
   {
     foreach (var item in _items)
     {
-      item.Run(logger);
+      item.Run(tests[item.Text], logger);
     }
   }
 }
@@ -59,8 +98,6 @@ class TestItem : ITreeGridItem<TestItem>
   public bool? Status { get; private set; }
   public Image ItemImage => GetImage();
 
-  private TestDelegate _delegate;
-
   private Image GetImage()
   {
     if (Status == null)
@@ -70,15 +107,14 @@ class TestItem : ITreeGridItem<TestItem>
 
   public TestItem this[int index] => throw new NotImplementedException();
 
-  public TestItem(string name, TestDelegate d)
+  public TestItem(string name)
   {
     Text = name;
-    _delegate = d;
   }
 
-  public void Run(ConsoleLogger logger)
+  public void Run(TestDelegate d, ConsoleLogger logger)
   {
-    var result = _delegate.Invoke();
+    var result = d.Invoke();
     Status = result.Success;
     if (!result.Success)
       logger.AddErrorLine(result.ErrorMessage);

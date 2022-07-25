@@ -1,6 +1,7 @@
 using System;
 using Eto.Forms;
 using Eto.Drawing;
+using EtoIntegrationTests.Interfaces;
 
 namespace EtoIntegrationTests
 {
@@ -180,7 +181,7 @@ namespace EtoIntegrationTests
     {
       var item = _scriptsView.SelectedItem as ScriptsTreeItem;
       _tasks.ShowServices(item?.GetServices());
-      _tests.ShowTests(item?.Folder);
+      _tests.ShowTests(item?.Folder, item?.Parameters, item?.TestServices);
       if (item is not { Expandable: false })
       {
         _stopButton.Enabled = false;

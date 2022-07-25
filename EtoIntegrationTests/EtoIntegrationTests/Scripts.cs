@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using Eto.Forms;
+using EtoIntegrationTests.Interfaces;
 using EtoIntegrationTests.Model;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
@@ -57,8 +58,10 @@ namespace EtoIntegrationTests
   {
     string GetText();
     string? GetFolder();
+    ITestParameters? GetParameters();
     List<ScriptsTreeItem> GetChildren(ScriptsTreeItem parent);
     Dictionary<string,List<Service>> GetServices();
+    Dictionary<string, IService> GetTestServices();
   }
 
   class ScriptsHandler : IScriptsTreeItemHandler
@@ -82,6 +85,16 @@ namespace EtoIntegrationTests
     public string? GetFolder()
     {
       return null;
+    }
+
+    public ITestParameters? GetParameters()
+    {
+      return null;
+    }
+
+    public Dictionary<string, IService> GetTestServices()
+    {
+      return new Dictionary<string, IService>();
     }
     
     public List<ScriptsTreeItem> GetChildren(ScriptsTreeItem parent)
@@ -110,11 +123,13 @@ namespace EtoIntegrationTests
     private readonly string _name;
     private readonly string? _folder;
     private readonly Dictionary<string, List<Service>> _services;
+    private readonly ITestParameters _parameters;
     
     public ServiceSetHandler(string name, ServiceSet set, Dictionary<string, List<Service>> serviceMap, Script script, string? folder)
     {
       _name = name;
       _folder = folder;
+      _parameters = script.TestParameters;
       _services = set.GetServices(script).Select(service => KeyValuePair.Create(service, Service.Build(service, serviceMap, script)))
         .ToDictionary(service => service.Key, service => service.Value);
     }
@@ -127,6 +142,17 @@ namespace EtoIntegrationTests
     public string? GetFolder()
     {
       return _folder;
+    }
+    
+    public ITestParameters? GetParameters()
+    {
+      return _parameters;
+    }
+
+    public Dictionary<string, IService> GetTestServices()
+    {
+      return _services.Select(service => service.Value).SelectMany(service => service)
+        .ToDictionary(service => service.Name, service => service as IService);
     }
     
     public List<ScriptsTreeItem> GetChildren(ScriptsTreeItem parent)
@@ -144,6 +170,8 @@ namespace EtoIntegrationTests
   {
     public string Text => _handler.GetText();
     public string? Folder => _handler.GetFolder();
+    public ITestParameters? Parameters => _handler.GetParameters();
+    public Dictionary<string, IService> TestServices => _handler.GetTestServices();
     public bool Expanded { get; set; }
     public bool Expandable => _children.Count > 0;
     public ITreeGridItem? Parent { get; set; }
