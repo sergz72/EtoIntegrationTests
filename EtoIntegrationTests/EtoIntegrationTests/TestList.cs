@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
+using System.Threading.Tasks;
 using Eto.Drawing;
 using Eto.Forms;
 using EtoIntegrationTests.Interfaces;
@@ -42,18 +42,24 @@ public class TestList: TreeGridView
   
   public void RunAllTests(Dictionary<string, TestDelegate> tests, ConsoleLogger logger)
   {
-    _dataStore.RunAllTests(tests, logger);
-    ReloadData();
+    Task.Run(() =>
+    {
+      _dataStore.RunAllTests(tests, logger, this);
+      logger.AddLine("Done.");
+    });
   }
   
   public void RunSelectedTests(Dictionary<string, TestDelegate> tests, ConsoleLogger logger)
   {
-    foreach (var item in SelectedItems)
+    Task.Run(() =>
     {
-      var ti = item as TestItem;
-      ti?.Run(tests[ti.Text], logger);
-      ReloadData();
-    }
+      foreach (var item in SelectedItems)
+      {
+        var ti = item as TestItem;
+        ti?.Run(tests[ti.Text], logger, this);
+      }
+      logger.AddLine("Done.");
+    });
   }
 }
 
@@ -79,11 +85,11 @@ class TestsDataStore : ITreeGridStore<TestItem>
     return _items.Count > 0;
   }
   
-  internal void RunAllTests(Dictionary<string, TestDelegate> tests, ConsoleLogger logger)
+  internal void RunAllTests(Dictionary<string, TestDelegate> tests, ConsoleLogger logger, TestList testList)
   {
     foreach (var item in _items)
     {
-      item.Run(tests[item.Text], logger);
+      item.Run(tests[item.Text], logger, testList);
     }
   }
 }
@@ -95,14 +101,18 @@ class TestItem : ITreeGridItem<TestItem>
   public ITreeGridItem? Parent { get; set; }
   public int Count => 0;
   public string Text { get; }
-  public bool? Status { get; private set; }
+  public TestStatus Status { get; private set; }
   public Image ItemImage => GetImage();
 
   private Image GetImage()
   {
-    if (Status == null)
-      return TasksItem.GrayImage;
-    return Status.Value ? TasksItem.GreenImage : TasksItem.RedImage;
+    return Status switch
+    {
+      TestStatus.NotStarted => TasksItem.GrayImage,
+      TestStatus.Started => TasksItem.YellowImage,
+      TestStatus.Success => TasksItem.GreenImage,
+      _ => TasksItem.RedImage
+    };
   }
 
   public TestItem this[int index] => throw new NotImplementedException();
@@ -112,12 +122,30 @@ class TestItem : ITreeGridItem<TestItem>
     Text = name;
   }
 
-  public void Run(TestDelegate d, ConsoleLogger logger)
+  public void Run(TestDelegate d, ConsoleLogger logger, TestList testList)
   {
-    var result = d.Invoke();
-    Status = result.Success;
-    if (!result.Success)
-      logger.AddErrorLine(result.ErrorMessage);
+    Status = TestStatus.Started;
+    Application.Instance.Invoke(testList.ReloadData);
+    try
+    {
+      var result = d.Invoke();
+      Status = result.Success ? TestStatus.Success : TestStatus.Failure;
+      if (!result.Success)
+        logger.AddErrorLine(result.ErrorMessage);
+    }
+    catch (Exception e)
+    {
+      Status = TestStatus.Failure;
+      logger.AddErrorLine(e.Message);
+    }
+    Application.Instance.Invoke(testList.ReloadData);
   }
 }
 
+public enum TestStatus
+{
+  NotStarted,
+  Started,
+  Success,
+  Failure
+}
