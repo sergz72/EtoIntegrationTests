@@ -148,6 +148,7 @@ public class Service: IService
       };
       p.OutputDataReceived += (_, data) => _logger.AddLine(data.Data);
       p.ErrorDataReceived += (_, data) => _logger.AddStderrLine(data.Data);
+      p.EnableRaisingEvents = true;
       try
       {
         if (_stopRequest)
