@@ -219,7 +219,7 @@ public class Service: IService
 
   public void ClearLogs()
   {
-    _logger.Clear();
+    Application.Instance.Invoke(_logger.Clear);
   }
 
   public string GetUrlForTests()
