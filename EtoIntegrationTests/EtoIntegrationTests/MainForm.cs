@@ -12,7 +12,8 @@ namespace EtoIntegrationTests
     private Label _scriptsLabel, _tasksLabel;
     private Tasks _tasks;
     private TabControl _actionsPanel;
-    private Tests _tests;
+    private readonly Tests _tests;
+    private readonly HttpServer _server;
 
     private void InitToolbar()
     {
@@ -162,6 +163,14 @@ namespace EtoIntegrationTests
       };
 
       ReloadScripts();
+      try
+      {
+        _server = new HttpServer(_tests);
+      }
+      catch (Exception e)
+      {
+        MessageBox.Show(this, e.Message, "Error");
+      }
     }
 #pragma warning restore CS8618
 

@@ -6,7 +6,6 @@ using System.Reflection;
 using System.Runtime.Loader;
 using Eto.Forms;
 using EtoIntegrationTests.Interfaces;
-using EtoIntegrationTests.Model;
 
 namespace EtoIntegrationTests;
 
@@ -149,5 +148,15 @@ public class Tests: StackLayout, ITestLogger
   public void Log(string line)
   {
     _testsResults.AddLine(line);
+  }
+
+  public ITestParameters? GetParameters()
+  {
+    return _parameters;
+  }
+
+  public Dictionary<string, IService>? GetServices()
+  {
+    return _services;
   }
 }
