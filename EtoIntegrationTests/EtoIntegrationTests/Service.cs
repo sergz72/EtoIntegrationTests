@@ -30,13 +30,8 @@ public class Service: IService
 
   public readonly string Name;
   public readonly string UrlForTests;
-  public bool Disabled { get; }
-  public bool CanBeStarted => !Disabled;
 
-  public bool IsStarted
-  {
-    get { return _process != null; }
-  }
+  public ItemStatus Status { get; private set; }
   
   public IStatusChange? StatusChangeHandler { get; set; }
   
@@ -53,7 +48,7 @@ public class Service: IService
   {
     Name = serviceName;
     _sscript = sscript;
-    Disabled = disabled;
+    Status = disabled ? ItemStatus.Disabled : ItemStatus.Stopped;
     _logger = new ConsoleLogger();
     _startDelay = sscript.StartDelay * 1000;
     Pages = BuildPages(sscript.ScriptWindows, _logger);
@@ -83,29 +78,42 @@ public class Service: IService
   public void Start()
   {
     _stopRequest = false;
-    if (!CanBeStarted)
-    {
-      _logger.AddErrorLine("Service cannot be started");
+    if (Status == ItemStatus.Disabled)
       return;
-    }
 
+    Status = ItemStatus.Starting;
+    StatusChangeHandler?.StatusChanged();
+    
     Task.Run(() =>
     {
       if (_stopRequest)
+      {
+        Status = ItemStatus.Stopped;
+        StatusChangeHandler?.StatusChanged();
         return;
+      }
+
       foreach (var port in _sscript.WaitForPorts)
       {
         while (!WaitForPort(port))
         {
           if (_stopRequest)
+          {
+            Status = ItemStatus.Stopped;
+            StatusChangeHandler?.StatusChanged();
             return;
+          }
           Thread.Sleep(500);
         }
       }
       if (_startDelay > 0)
         Thread.Sleep(_startDelay);
       if (_stopRequest)
+      {
+        Status = ItemStatus.Stopped;
+        StatusChangeHandler?.StatusChanged();
         return;
+      }
       var p = new Process();
       if (_sscript.Commands.Count > 1)
       {
@@ -135,6 +143,7 @@ public class Service: IService
       p.Exited += delegate
       {
         _process = null;
+        Status = ItemStatus.Stopped;
         StatusChangeHandler?.StatusChanged();
       };
       p.OutputDataReceived += (_, data) => _logger.AddLine(data.Data);
@@ -142,16 +151,22 @@ public class Service: IService
       try
       {
         if (_stopRequest)
+        {
+          Status = ItemStatus.Stopped;
+          StatusChangeHandler?.StatusChanged();
           return;
+        }
         p.Start();
         p.BeginErrorReadLine();
         p.BeginOutputReadLine();
         _process = p;
+        Status = ItemStatus.Started;
         StatusChangeHandler?.StatusChanged();
       }
       catch (Exception e)
       {
         _logger.AddErrorLine(e.Message);
+        Stop();
       }
     });
   }
@@ -193,6 +208,7 @@ public class Service: IService
       _batchFileName = "";
     }
     _logger.Clear();
+    Status = ItemStatus.Stopped;
     StatusChangeHandler?.StatusChanged();
   }
 

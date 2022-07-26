@@ -1,7 +1,6 @@
 using System;
 using Eto.Forms;
 using Eto.Drawing;
-using EtoIntegrationTests.Interfaces;
 
 namespace EtoIntegrationTests
 {
@@ -206,7 +205,7 @@ namespace EtoIntegrationTests
     {
       var item = _tasks.SelectedItem as TasksItem;
       _actionsPanel.Pages.Clear();
-      if (item is not { CanBeStarted: true })
+      if (item == null || item.Status == ItemStatus.Disabled)
       {
         _stopButton.Enabled = false;
         _startButton.Enabled = false;
@@ -215,7 +214,7 @@ namespace EtoIntegrationTests
       {
         item.Pages.ForEach(page => _actionsPanel.Pages.Add(page));
         
-        if (item.IsStarted)
+        if (item.Status != ItemStatus.Stopped)
         {
           _stopButton.Enabled = true;
           _startButton.Enabled = false;

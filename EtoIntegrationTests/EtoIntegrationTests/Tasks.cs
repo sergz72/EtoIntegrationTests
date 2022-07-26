@@ -89,20 +89,17 @@ class TasksItem : ITreeGridItem<TasksItem>, IStartable
 
   public TasksItem this[int index] => _services![index];
 
-  public bool CanBeStarted => _service?.CanBeStarted ?? _services![0].CanBeStarted;
-  public bool IsStarted => _service?.IsStarted ?? _isStarted;
+  public ItemStatus Status => GetStatus();
 
   public List<TabPage> Pages => _service?.Pages ?? new List<TabPage>();
 
   private readonly List<TasksItem>? _services;
   private readonly Service? _service;
-  private bool _isStarted;
   
   public TasksItem(string name, List<Service> services)
   {
     Text = name;
     _services = services.Select(service => new TasksItem(service)).ToList();
-    _isStarted = false;
     Expanded = true;
   }
 
@@ -110,21 +107,28 @@ class TasksItem : ITreeGridItem<TasksItem>, IStartable
   {
     Text = service.Name;
     _service = service;
-    _isStarted = false;
+  }
+
+  private ItemStatus GetStatus()
+  {
+    if (_service != null)
+      return _service.Status;
+    if (_services![0].Status == ItemStatus.Disabled)
+      return ItemStatus.Disabled;
+    if (_services.All(service => service.Status == ItemStatus.Stopped))
+      return ItemStatus.Stopped;
+    return _services.All(service => service.Status == ItemStatus.Started) ? ItemStatus.Started : ItemStatus.Starting;
   }
 
   private Image GetServiceImage()
   {
-    if (_service != null)
+    return Status switch
     {
-      if (!_service.CanBeStarted)
-        return GrayImage;
-      return _service.IsStarted ? GreenImage : RedImage;
-    }
-
-    if (!_services![0].CanBeStarted)
-      return GrayImage;
-    return _isStarted ? GreenImage : RedImage;
+      ItemStatus.Disabled => GrayImage,
+      ItemStatus.Stopped => RedImage,
+      ItemStatus.Started => GreenImage,
+      _ => YellowImage
+    };
   }
 
   public void Start()
@@ -146,4 +150,12 @@ class TasksItem : ITreeGridItem<TasksItem>, IStartable
         service.Stop();
     }
   }
+}
+
+public enum ItemStatus
+{
+  Disabled,
+  Stopped,
+  Starting,
+  Started
 }
