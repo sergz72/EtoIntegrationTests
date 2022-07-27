@@ -9,9 +9,6 @@ namespace EtoIntegrationTests.Model;
 
 public class Script
 {
-  [YamlMember(Alias = "test_runner", ApplyNamingConventions = false)]
-  public string TestRunner { get; set; }
-  
   [YamlMember(Alias = "service_sets", ApplyNamingConventions = false)]
   public Dictionary<string, ServiceSet> ServiceSets { get; set; }
 
@@ -30,7 +27,6 @@ public class Script
     LocalServices = new Dictionary<string, YAMLLocalService>();
     ServiceSubSets = new Dictionary<string, List<string>>();
     TestParameters = new Parameters();
-    TestRunner = "";
   }
 
   public void Validate()
