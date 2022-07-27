@@ -9,7 +9,7 @@ namespace EtoIntegrationTests.TestRunner;
 class TestRunner : ITestLogger
 {
   private readonly string _folder;
-  private readonly ITestParameters _parameters;
+  private readonly Connectors _connectors;
   private readonly Dictionary<string, IService> _services;
   
   static void Main(string[] args)
@@ -62,11 +62,15 @@ class TestRunner : ITestLogger
   {
     _folder = folder;
     var parameters = GetCommonParameters();
-    _parameters = parameters.TestParameters;
+    _connectors = new Connectors
+    {
+      KafkaConnector = new KafkaConnector(parameters.TestParameters.Kafka),
+      CassandraConnector = new CassandraConnector(parameters.TestParameters.Cassandra)
+    };
     _services = parameters.Services.ToDictionary(service => service,
       service => new Service(service, parameters) as IService);
   }
-  
+
   private void RunTests(string[] testNames)
   {
     TestsHandler(tests =>
@@ -139,7 +143,7 @@ class TestRunner : ITestLogger
       if (type.GetInterfaces().Contains(typeof(ITests)))
       {
         var t = Activator.CreateInstance(type) as ITests;
-        var tests = t?.Init(_parameters, _services, this);
+        var tests = t?.Init(_connectors, _services, this);
         if (tests != null)
           handler(tests);
       }

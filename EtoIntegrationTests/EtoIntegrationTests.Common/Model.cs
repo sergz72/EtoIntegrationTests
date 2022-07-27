@@ -1,9 +1,8 @@
-﻿using EtoIntegrationTests.Interfaces;
-using YamlDotNet.Serialization;
+﻿using YamlDotNet.Serialization;
 
 namespace EtoIntegrationTests.Common;
 
-public class Parameters: ITestParameters
+public class Parameters
 {
   public KafkaParameters Kafka { get; set; }
   public CassandraParameters Cassandra { get; set; }
@@ -13,19 +12,9 @@ public class Parameters: ITestParameters
     Kafka = new KafkaParameters();
     Cassandra = new CassandraParameters();
   }
-
-  public IKafkaParameters GetKafkaParameters()
-  {
-    return Kafka;
-  }
-
-  public ICassandraParameters GetCassandraParameters()
-  {
-    return Cassandra;
-  }
 }
 
-public class KafkaParameters: IKafkaParameters
+public class KafkaParameters
 {
   public string Host { get; set; }
   
@@ -36,19 +25,9 @@ public class KafkaParameters: IKafkaParameters
     Host = "";
     Topics = new Dictionary<string, KafkaTopicParameters>();
   }
-
-  public string GetHost()
-  {
-    return Host;
-  }
-
-  public Dictionary<string, IKafkaTopicParameters> GetTopics()
-  {
-    return Topics.ToDictionary(topic => topic.Key, topic => topic.Value as IKafkaTopicParameters);
-  }
 }
 
-public class KafkaTopicParameters: IKafkaTopicParameters
+public class KafkaTopicParameters
 {
   public string Name { get; set; }
   public string Group { get; set; }
@@ -58,19 +37,9 @@ public class KafkaTopicParameters: IKafkaTopicParameters
     Name = "";
     Group = "";
   }
-
-  public string GetName()
-  {
-    return Name;
-  }
-
-  public string GetGroup()
-  {
-    return Group;
-  }
 }
 
-public class CassandraParameters: ICassandraParameters
+public class CassandraParameters
 {
   public string Host { get; set; }
   public int Port { get; set; }
@@ -81,21 +50,6 @@ public class CassandraParameters: ICassandraParameters
   {
     Host = "";
     DbName = "";
-  }
-
-  public string GetHost()
-  {
-    return Host;
-  }
-
-  public int GetPort()
-  {
-    return Port;
-  }
-
-  public string GetDbName()
-  {
-    return DbName;
   }
 }
 

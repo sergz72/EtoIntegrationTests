@@ -9,29 +9,27 @@ namespace EtoIntegrationTests.Interfaces
     string GetUrlForTests();
   }
 
-  public interface ITestParameters
+  public struct Connectors
   {
-    IKafkaParameters GetKafkaParameters();
-    ICassandraParameters GetCassandraParameters();
+    public IKafkaConnector KafkaConnector;
+    public ICassandraConnector CassandraConnector;
   }
 
-  public interface IKafkaParameters
+  public interface IKafkaConnector
   {
-    string GetHost();
-    Dictionary<string, IKafkaTopicParameters> GetTopics();
   }
 
-  public interface IKafkaTopicParameters
+  public interface ICassandraConnector
   {
-    string GetName();
-    string GetGroup();
+    void Connect();
+    void TruncateTable(string tableName);
+    ResultSet GetTableData(string tableName);
   }
 
-  public interface ICassandraParameters
+  public struct ResultSet
   {
-    string GetHost();
-    int GetPort();
-    string GetDbName();
+    public Dictionary<string, int> ColumnMapping;
+    public List<List<object>> Rows;
   }
 
   public interface ITestLogger
@@ -61,6 +59,6 @@ namespace EtoIntegrationTests.Interfaces
   
   public interface ITests
   {
-    Dictionary<string, TestDelegate> Init(ITestParameters parameters, Dictionary<string, IService> services, ITestLogger logger);
+    Dictionary<string, TestDelegate> Init(Connectors connectors, Dictionary<string, IService> services, ITestLogger logger);
   }
 }

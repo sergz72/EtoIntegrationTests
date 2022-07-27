@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Eto.Forms;
+using EtoIntegrationTests.Common;
 using EtoIntegrationTests.Interfaces;
 
 namespace EtoIntegrationTests;
@@ -16,7 +17,7 @@ public class Tests: StackLayout, ITestLogger
   private readonly Button _runAllButton, _runButton;
   private readonly string _testRunnerFileName;
   private string? _folder;
-  private ITestParameters? _parameters;
+  private Parameters? _parameters;
   private Dictionary<string, IService>? _services;
   private string _currentTest;
 
@@ -94,7 +95,7 @@ public class Tests: StackLayout, ITestLogger
     };
   }
 
-  public void ShowTests(string? folder, ITestParameters? parameters, Dictionary<string, IService>? services)
+  public void ShowTests(string? folder, Parameters? parameters, Dictionary<string, IService>? services)
   {
     if (folder == null || parameters == null || services == null || services.Count == 0)
     {
@@ -222,7 +223,7 @@ public class Tests: StackLayout, ITestLogger
     _testsResults.AddLine(line);
   }
 
-  public ITestParameters? GetParameters()
+  public Parameters? GetParameters()
   {
     return _parameters;
   }

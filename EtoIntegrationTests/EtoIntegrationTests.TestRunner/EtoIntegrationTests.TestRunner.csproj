@@ -11,4 +11,8 @@
       <ProjectReference Include="..\EtoIntegrationTests.Common\EtoIntegrationTests.Common.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <PackageReference Include="CassandraCSharpDriver" Version="3.18.0" />
+    </ItemGroup>
+
 </Project>

@@ -4,7 +4,6 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Text.Json;
 using EtoIntegrationTests.Common;
-using EtoIntegrationTests.Model;
 
 namespace EtoIntegrationTests;
 
@@ -57,7 +56,7 @@ public class HttpServer
           {
             var commonParameters = new CommonParameters
             {
-              TestParameters = (parameters as Parameters)!,
+              TestParameters = parameters,
               Services = services.Select(service => service.Key).ToList(),
               ServiceUrls = services.Where(service => service.Value.GetUrlForTests().Length > 0)
                 .ToDictionary(service => service.Key, service => service.Value.GetUrlForTests())

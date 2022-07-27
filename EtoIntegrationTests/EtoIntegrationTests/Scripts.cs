@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using Eto.Forms;
+using EtoIntegrationTests.Common;
 using EtoIntegrationTests.Interfaces;
 using EtoIntegrationTests.Model;
 using YamlDotNet.Serialization;
@@ -58,7 +59,7 @@ namespace EtoIntegrationTests
   {
     string GetText();
     string? GetFolder();
-    ITestParameters? GetParameters();
+    Parameters? GetParameters();
     List<ScriptsTreeItem> GetChildren(ScriptsTreeItem parent);
     Dictionary<string,List<Service>> GetServices();
     Dictionary<string, IService> GetTestServices();
@@ -87,7 +88,7 @@ namespace EtoIntegrationTests
       return null;
     }
 
-    public ITestParameters? GetParameters()
+    public Parameters? GetParameters()
     {
       return null;
     }
@@ -123,7 +124,7 @@ namespace EtoIntegrationTests
     private readonly string _name;
     private readonly string? _folder;
     private readonly Dictionary<string, List<Service>> _services;
-    private readonly ITestParameters _parameters;
+    private readonly Parameters _parameters;
     
     public ServiceSetHandler(string name, ServiceSet set, Dictionary<string, List<Service>> serviceMap, Script script, string? folder)
     {
@@ -144,7 +145,7 @@ namespace EtoIntegrationTests
       return _folder;
     }
     
-    public ITestParameters? GetParameters()
+    public Parameters GetParameters()
     {
       return _parameters;
     }
@@ -170,7 +171,7 @@ namespace EtoIntegrationTests
   {
     public string Text => _handler.GetText();
     public string? Folder => _handler.GetFolder();
-    public ITestParameters? Parameters => _handler.GetParameters();
+    public Parameters? Parameters => _handler.GetParameters();
     public Dictionary<string, IService> TestServices => _handler.GetTestServices();
     public bool Expanded { get; set; }
     public bool Expandable => _children.Count > 0;

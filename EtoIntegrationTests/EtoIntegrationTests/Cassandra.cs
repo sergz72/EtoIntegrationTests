@@ -35,11 +35,11 @@ class CassandraClient : StackLayout
       Text = "Refresh"
     };
     refreshButton.Click += RefreshButtonOnClick;
-    var runCQLButton = new Button
+    var runCqlButton = new Button
     {
       Text = "Run CQL"
     };
-    runCQLButton.Click += RunCQLButtonOnClick;
+    runCqlButton.Click += RunCQLButtonOnClick;
     Items.Add(new StackLayoutItem
     {
       Control = new StackLayout
@@ -54,7 +54,7 @@ class CassandraClient : StackLayout
           },
           new StackLayoutItem
           {
-          Control = runCQLButton,
+          Control = runCqlButton,
           Expand = true
         }
         }
