@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
+using System.Linq;
 using Eto.Drawing;
 using Eto.Forms;
-using EtoIntegrationTests.Interfaces;
 
 namespace EtoIntegrationTests;
 
@@ -39,27 +38,40 @@ public class TestList: TreeGridView
       _dataStore.Add(test);
     ReloadData();
   }
-  
-  public void RunAllTests(Dictionary<string, TestDelegate> tests, ConsoleLogger logger)
+
+  public void ResetAllTests()
   {
-    Task.Run(() =>
-    {
-      _dataStore.RunAllTests(tests, logger, this);
-      logger.AddLine("Done.");
-    });
+    _dataStore.ResetAllTests();
+    ReloadData();
   }
   
-  public void RunSelectedTests(Dictionary<string, TestDelegate> tests, ConsoleLogger logger)
+  public void ResetTests(List<string> tests)
   {
-    Task.Run(() =>
-    {
-      foreach (var item in SelectedItems)
-      {
-        var ti = item as TestItem;
-        ti?.Run(tests[ti.Text], logger, this);
-      }
-      logger.AddLine("Done.");
-    });
+    _dataStore.ResetTests(tests);
+    ReloadData();
+  }
+
+  public List<string> GetSelectedTests()
+  {
+    return SelectedItems.Select(item => (item as TestItem)!.Text).ToList();
+  }
+
+  public void Success(string name)
+  {
+    _dataStore.Success(name);
+    Application.Instance.Invoke(ReloadData);
+  }
+
+  public void Started(string name)
+  {
+    _dataStore.Started(name);
+    Application.Instance.Invoke(ReloadData);
+  }
+
+  public void Failure(string name)
+  {
+    _dataStore.Failure(name);
+    Application.Instance.Invoke(ReloadData);
   }
 }
 
@@ -85,11 +97,45 @@ class TestsDataStore : ITreeGridStore<TestItem>
     return _items.Count > 0;
   }
   
-  internal void RunAllTests(Dictionary<string, TestDelegate> tests, ConsoleLogger logger, TestList testList)
+  public void ResetAllTests()
+  {
+    foreach (var item in _items)
+      item.Reset();
+  }
+  
+  public void ResetTests(List<string> tests)
   {
     foreach (var item in _items)
     {
-      item.Run(tests[item.Text], logger, testList);
+      if (tests.Contains(item.Text))
+        item.Reset();
+    }
+  }
+
+  public void Success(string name)
+  {
+    foreach (var item in _items)
+    {
+      if (name == item.Text)
+        item.Success();
+    }
+  }
+
+  public void Failure(string name)
+  {
+    foreach (var item in _items)
+    {
+      if (name == item.Text)
+        item.Failure();
+    }
+  }
+
+  public void Started(string name)
+  {
+    foreach (var item in _items)
+    {
+      if (name == item.Text)
+        item.Started();
     }
   }
 }
@@ -122,23 +168,24 @@ class TestItem : ITreeGridItem<TestItem>
     Text = name;
   }
 
-  public void Run(TestDelegate d, ConsoleLogger logger, TestList testList)
+  public void Reset()
+  {
+    Status = TestStatus.NotStarted;
+  }
+
+  public void Success()
+  {
+    Status = TestStatus.Success;
+  }
+  
+  public void Failure()
+  {
+    Status = TestStatus.Failure;
+  }
+  
+  public void Started()
   {
     Status = TestStatus.Started;
-    Application.Instance.Invoke(testList.ReloadData);
-    try
-    {
-      var result = d.Invoke();
-      Status = result.Success ? TestStatus.Success : TestStatus.Failure;
-      if (!result.Success)
-        logger.AddErrorLine(result.ErrorMessage);
-    }
-    catch (Exception e)
-    {
-      Status = TestStatus.Failure;
-      logger.AddErrorLine(e.Message);
-    }
-    Application.Instance.Invoke(testList.ReloadData);
   }
 }
 

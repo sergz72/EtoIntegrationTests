@@ -69,10 +69,21 @@ class TestRunner : ITestLogger
   
   private void RunTests(string[] testNames)
   {
+    TestsHandler(tests =>
+    {
+      foreach (var test in tests
+                 .Where(test => Array.Exists(testNames, e => e == test.Key)))
+        RunTest(test.Key, test.Value);
+    });
   }
 
   private void RunAllTests()
   {
+    TestsHandler(tests =>
+    {
+      foreach (var test in tests)
+        RunTest(test.Key, test.Value);
+    });
   }
 
   private void ShowTestList()
@@ -138,6 +149,20 @@ class TestRunner : ITestLogger
   public void Log(string line)
   {
     Console.WriteLine(line);
+  }
+  
+  private void RunTest(string name, TestDelegate d)
+  {
+    Console.WriteLine($"##started {name}");
+    try
+    {
+      var result = d.Invoke();
+      Console.WriteLine(result.Success ? "##success" : $"##failure {result.ErrorMessage}");
+    }
+    catch (Exception e)
+    {
+      Console.WriteLine($"##failure {e.Message}");
+    }
   }
 }
 

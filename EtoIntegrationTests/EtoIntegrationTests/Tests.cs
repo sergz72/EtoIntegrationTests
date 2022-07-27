@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Eto.Forms;
 using EtoIntegrationTests.Interfaces;
 
@@ -17,9 +18,11 @@ public class Tests: StackLayout, ITestLogger
   private string? _folder;
   private ITestParameters? _parameters;
   private Dictionary<string, IService>? _services;
+  private string _currentTest;
 
   public Tests(string testRunnerFileName)
   {
+    _currentTest = "";
     _testRunnerFileName = testRunnerFileName;
     _testsList = new TestList();
     _testsList.Width = 300;
@@ -109,8 +112,7 @@ public class Tests: StackLayout, ITestLogger
     }
     catch (Exception e)
     {
-      Console.WriteLine(e);
-      throw;
+      _testsResults.AddErrorLine(e.Message);
     }
     _runAllButton.Enabled = _testsList.IsNotEmpty();
     _runButton.Enabled = false;
@@ -133,6 +135,72 @@ public class Tests: StackLayout, ITestLogger
     p.WaitForExit();
     return lines;
   }
+
+  private void TestRunnerRunTests(List<string>? tests)
+  {
+    if (tests == null)
+      _testsList.ResetAllTests();
+    else
+    {
+      if (tests.Count == 0)
+        return;
+      _testsList.ResetTests(tests);
+    }
+    
+    var testNames = tests == null ? "" : " " + string.Join(" ", tests);
+
+    _runButton.Enabled = false;
+    _runAllButton.Enabled = false;
+    
+    var p = new Process();
+    p.StartInfo.FileName = _testRunnerFileName;
+    p.StartInfo.Arguments = _folder + " run" + testNames;
+    p.StartInfo.CreateNoWindow = true;
+    p.StartInfo.RedirectStandardOutput = true;
+    p.StartInfo.RedirectStandardError = true;
+    p.OutputDataReceived += (_, data) => ProcessLine(data.Data);
+    p.ErrorDataReceived += (_, data) => ProcessStderrLine(data.Data);
+    p.Start();
+    p.BeginErrorReadLine();
+    p.BeginOutputReadLine();
+    Task.Run(() => { 
+      p.WaitForExit();
+      EnableButtons();
+    });
+  }
+
+  private void ProcessStderrLine(string? data)
+  {
+    _testsResults.AddErrorLine(data);
+  }
+
+  private void ProcessLine(string? data)
+  {
+    if (data != null)
+    {
+      if (data == "##success")
+        _testsList.Success(_currentTest);
+      else if (data.StartsWith("##started "))
+      {
+        _currentTest = data[11..];
+        _testsList.Started(_currentTest);
+      }
+      else if (data.StartsWith("##failure "))
+      {
+        var errorMessage = data[10..];
+        _testsResults.AddErrorLine(errorMessage);
+        _testsList.Failure(_currentTest);
+      }
+      else
+        _testsResults.AddLine(data);
+    }
+  }
+
+  private void EnableButtons()
+  {
+    Application.Instance.Invoke(() => _runAllButton.Enabled = _testsList.IsNotEmpty());
+    Application.Instance.Invoke(() => _runButton.Enabled = _testsList.SelectedItems.Any());
+  }
   
   private void TestsListOnSelectedItemChanged(object? sender, EventArgs e)
   {
@@ -141,12 +209,12 @@ public class Tests: StackLayout, ITestLogger
 
   private void RunButtonOnClick(object? sender, EventArgs e)
   {
-    //TestsHandler(tests => _testsList.RunSelectedTests(tests, _testsResults));
+    TestRunnerRunTests(_testsList.GetSelectedTests());
   }
 
   private void RunAllButtonOnClick(object? sender, EventArgs e)
   {
-    //TestsHandler(tests => _testsList.RunAllTests(tests, _testsResults));
+    TestRunnerRunTests(null);
   }
 
   public void Log(string line)
