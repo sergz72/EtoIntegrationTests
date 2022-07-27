@@ -9,7 +9,7 @@ service_sets:
 
 service_subsets:
   stubs:
-    - acms-stubs
+    - some-stubs
 
 local_services:
   kafka:
@@ -32,18 +32,18 @@ local_services:
         windows:
           console:
             type: console
-          communicator:
+          test:
             type: kafka
-            parameters: 127.0.0.1:9092 communicator communicator_testconsumer
-          policy:
+            parameters: 127.0.0.1:9092 test test_testconsumer
+          test2:
             type: kafka
-            parameters: 127.0.0.1:9092 policy-engine-container-effective-policy-change policy_testconsumer
+            parameters: 127.0.0.1:9092 test2 test2_testconsumer
       topic_create:
         wait_for_ports: [9092]
         workdir: c:\kafka\bin\windows
         commands:
-          - kafka-topics.bat --bootstrap-server 127.0.0.1:9092 --create --topic communicator
-          - kafka-topics.bat --bootstrap-server 127.0.0.1:9092 --create --topic policy-engine-container-effective-policy-change
+          - kafka-topics.bat --bootstrap-server 127.0.0.1:9092 --create --topic test
+          - kafka-topics.bat --bootstrap-server 127.0.0.1:9092 --create --topic test2
         windows:
           console:
             type: console
@@ -60,25 +60,25 @@ local_services:
         windows:
           console:
             type: console
-          platform_communicator_db:
+          test_db:
             type: cassandra
-            parameters: 127.0.0.1 9092 platform_communicator_db
+            parameters: 127.0.0.1 9092 test_db
       db_create:
         wait_for_ports: [9042]
-        workdir: D:\projects\connectwise\GoLand\communicator\cassandra-init\bin
+        workdir: D:\some_folder\bin
         commands:
-          - cassandra_init.exe platform_communicator_db D:\projects\connectwise\GoLand\communicator\communicator-service\cql\changelogs
+          - cassandra_init.exe test_db D:\some_folder\cql\changelogs
         windows:
           console:
             type: console
 
-  acms-stubs:
+  some-stubs:
     disabled: false
     scripts:
-      acms-stubs:
-        workdir: D:\projects\connectwise\GoLand\communicator\communicator-service\bin
+      some-stubs:
+        workdir: D:\sime_folder\bin
         commands:
-          - acms-stubs.exe
+          - some-stubs.exe
         windows:
           console:
             type: console
@@ -89,10 +89,10 @@ local_services:
     scripts:
       server:
         wait_for_ports: [9092,9042]
-        workdir: D:\projects\connectwise\GoLand\communicator\communicator-service\bin
-        env_file: D:\projects\connectwise\GoLand\communicator\communicator-service\.env
+        workdir: D:\some_folder\bin
+        env_file: D:\some_folder\.env
         commands:
-          - platform-communicator-service.exe
+          - some-service.exe
         windows:
           console:
             type: console
@@ -101,13 +101,13 @@ test_parameters:
   kafka:
     host: 127.0.0.1:9092
     topics:
-      communicator:
-        name: communicator
-        group: communicator_testconsumer
+      test:
+        name: test
+        group: test_testconsumer
       policy:
-        name: policy-engine-container-effective-policy-change
-        group: policy_testconsumer
+        name: test2
+        group: test2_testconsumer
   cassandra:
     host: 127.0.0.1
     port: 9042
-    db_name: platform_communicator_db
+    db_name: test_db
