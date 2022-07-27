@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Reflection;
-using System.Runtime.Loader;
 using Eto.Forms;
 using EtoIntegrationTests.Interfaces;
 
@@ -14,12 +13,14 @@ public class Tests: StackLayout, ITestLogger
   private readonly TestList _testsList;
   private readonly ConsoleLogger _testsResults;
   private readonly Button _runAllButton, _runButton;
+  private readonly string _testRunnerFileName;
   private string? _folder;
   private ITestParameters? _parameters;
   private Dictionary<string, IService>? _services;
 
-  public Tests()
+  public Tests(string testRunnerFileName)
   {
+    _testRunnerFileName = testRunnerFileName;
     _testsList = new TestList();
     _testsList.Width = 300;
     _testsList.SelectedItemChanged += TestsListOnSelectedItemChanged;
@@ -90,44 +91,47 @@ public class Tests: StackLayout, ITestLogger
     };
   }
 
-  private void TestsHandler(Action<Dictionary<string, TestDelegate>> handler)
-  {
-    if (_folder == null)
-      return;
-    var testsFile = Directory.GetFiles(_folder, "*.dll").FirstOrDefault();
-    if (testsFile == null)
-      return;
-    try
-    {
-      var alc = new AssemblyLoadContext("test", true);
-
-      Assembly a = alc.LoadFromAssemblyPath(Path.GetFullPath(testsFile));
-      foreach (var type in a.GetTypes())
-      {
-        if (type.GetInterfaces().Contains(typeof(ITests)))
-        {
-          var t = Activator.CreateInstance(type) as ITests;
-          var tests = t?.Init(_parameters, _services, this);
-          if (tests != null)
-            handler(tests);
-        }
-      }
-      alc.Unload();
-    }
-    catch (Exception e)
-    {
-      _testsResults.AddErrorLine(e.Message);
-    }
-  }
-  
   public void ShowTests(string? folder, ITestParameters? parameters, Dictionary<string, IService>? services)
   {
+    if (folder == null || parameters == null || services == null || services.Count == 0)
+    {
+      _testsList.ShowTests(new List<string>());
+      return;
+    }
+    
     _folder = folder;
     _parameters = parameters;
     _services = services;
-    TestsHandler(tests => _testsList.ShowTests(tests));
+    try
+    {
+      var output = TestRunnerListTests();
+      _testsList.ShowTests(output);
+    }
+    catch (Exception e)
+    {
+      Console.WriteLine(e);
+      throw;
+    }
     _runAllButton.Enabled = _testsList.IsNotEmpty();
     _runButton.Enabled = false;
+  }
+
+  private List<string> TestRunnerListTests()
+  {
+    var p = new Process();
+    p.StartInfo.FileName = _testRunnerFileName;
+    p.StartInfo.Arguments = _folder + " list";
+    p.StartInfo.CreateNoWindow = true;
+    p.StartInfo.RedirectStandardOutput = true;
+    p.StartInfo.RedirectStandardError = true;
+    p.Start();
+    var lines = p.StandardOutput.ReadToEnd().Split("\n")
+      .Select(line => line.Replace("\r", "")).Where(line => line.Length > 0).ToList();
+    var errors = p.StandardError.ReadToEnd();
+    if (errors.Length > 0)
+      throw new InvalidDataException(errors);
+    p.WaitForExit();
+    return lines;
   }
   
   private void TestsListOnSelectedItemChanged(object? sender, EventArgs e)
@@ -137,12 +141,12 @@ public class Tests: StackLayout, ITestLogger
 
   private void RunButtonOnClick(object? sender, EventArgs e)
   {
-    TestsHandler(tests => _testsList.RunSelectedTests(tests, _testsResults));
+    //TestsHandler(tests => _testsList.RunSelectedTests(tests, _testsResults));
   }
 
   private void RunAllButtonOnClick(object? sender, EventArgs e)
   {
-    TestsHandler(tests => _testsList.RunAllTests(tests, _testsResults));
+    //TestsHandler(tests => _testsList.RunAllTests(tests, _testsResults));
   }
 
   public void Log(string line)

@@ -48,20 +48,20 @@ class TestRunner : ITestLogger
     }
     catch (Exception e)
     {
-      Console.WriteLine("##fatal {0}", e);
+      Console.Error.WriteLine("##fatal {0}", e);
       throw;
     }
   }
 
   private static void Usage()
   {
-    Console.WriteLine("Usage: TestRunner folder_name list|run [test_names]");
+    Console.Error.WriteLine("Usage: TestRunner folder_name list|run [test_names]");
   }
 
   private TestRunner(string folder)
   {
     _folder = folder;
-    var parameters = GetCommonParameters(folder);
+    var parameters = GetCommonParameters();
     _parameters = parameters.TestParameters;
     _services = parameters.Services.ToDictionary(service => service,
       service => new Service(service, parameters) as IService);
@@ -112,7 +112,7 @@ class TestRunner : ITestLogger
       throw new InvalidDataException($"Wrong response code to delete {endpoint} request");
   }
 
-  private CommonParameters GetCommonParameters(string folder)
+  private CommonParameters GetCommonParameters()
   {
     return JsonSerializer.Deserialize<CommonParameters>(GetData("parameters"));
   }

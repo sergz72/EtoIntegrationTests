@@ -1,6 +1,7 @@
 using System;
 using Eto.Forms;
 using Eto.Drawing;
+using Microsoft.Extensions.Configuration;
 
 namespace EtoIntegrationTests
 {
@@ -116,8 +117,17 @@ namespace EtoIntegrationTests
       _actionsPanel = new TabControl();
     }
 
+    public static string? GetRunner()
+    {
+      IConfiguration config = new ConfigurationBuilder()
+        .AddJsonFile("appsettings.json")
+        .Build();
+
+      return config.GetRequiredSection("Settings")["TestRunner"];
+    }
+
 #pragma warning disable CS8618
-    public MainForm()
+    public MainForm(string runner)
     {
       Title = "Integration tests";
       MinimumSize = new Size(800, 400);
@@ -135,7 +145,7 @@ namespace EtoIntegrationTests
         Panel1MinimumSize = 150
       };
 
-      _tests = new Tests();
+      _tests = new Tests(runner);
       
       Content = new StackLayout
       {

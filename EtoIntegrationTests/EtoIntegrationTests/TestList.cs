@@ -32,11 +32,11 @@ public class TestList: TreeGridView
     return _dataStore.IsNotEmpty();
   }
   
-  public void ShowTests(Dictionary<string, TestDelegate> tests)
+  public void ShowTests(List<string> tests)
   {
     _dataStore.Clear();
     foreach (var test in tests)
-      _dataStore.Add(test.Key);
+      _dataStore.Add(test);
     ReloadData();
   }
   
