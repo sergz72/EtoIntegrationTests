@@ -1,7 +1,9 @@
-﻿using System.Net;
+﻿using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Text.Json;
+using EtoIntegrationTests.Common;
 using EtoIntegrationTests.Model;
 
 namespace EtoIntegrationTests;
@@ -53,7 +55,14 @@ public class HttpServer
           }
           else if (p == "/parameters" && request.HttpMethod == HttpMethod.Get.Method)
           {
-            string jsonString = JsonSerializer.Serialize(parameters as Parameters);
+            var commonParameters = new CommonParameters
+            {
+              TestParameters = (parameters as Parameters)!,
+              Services = services.Select(service => service.Key).ToList(),
+              ServiceUrls = services.Where(service => service.Value.GetUrlForTests().Length > 0)
+                .ToDictionary(service => service.Key, service => service.Value.GetUrlForTests())
+            };
+            string jsonString = JsonSerializer.Serialize(commonParameters);
             SendResponse(context, 200, jsonString);
             continue;
           }

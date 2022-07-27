@@ -2,13 +2,16 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using EtoIntegrationTests.Interfaces;
+using EtoIntegrationTests.Common;
 using YamlDotNet.Serialization;
 
 namespace EtoIntegrationTests.Model;
 
 public class Script
 {
+  [YamlMember(Alias = "test_runner", ApplyNamingConventions = false)]
+  public string TestRunner { get; set; }
+  
   [YamlMember(Alias = "service_sets", ApplyNamingConventions = false)]
   public Dictionary<string, ServiceSet> ServiceSets { get; set; }
 
@@ -27,6 +30,7 @@ public class Script
     LocalServices = new Dictionary<string, YAMLLocalService>();
     ServiceSubSets = new Dictionary<string, List<string>>();
     TestParameters = new Parameters();
+    TestRunner = "";
   }
 
   public void Validate()
@@ -216,101 +220,5 @@ public class ScriptWindow
     }
     if (!Service.IsValidWindowType(Type))
       Script.ValidationException(serviceName, "unknown window type");
-  }
-}
-
-public class Parameters: ITestParameters
-{
-  public KafkaParameters Kafka { get; set; }
-  public CassandraParameters Cassandra { get; set; }
-
-  public Parameters()
-  {
-    Kafka = new KafkaParameters();
-    Cassandra = new CassandraParameters();
-  }
-
-  public IKafkaParameters GetKafkaParameters()
-  {
-    return Kafka;
-  }
-
-  public ICassandraParameters GetCassandraParameters()
-  {
-    return Cassandra;
-  }
-}
-
-public class KafkaParameters: IKafkaParameters
-{
-  public string Host { get; set; }
-  
-  public Dictionary<string, KafkaTopicParameters> Topics { get; set; }
-
-  public KafkaParameters()
-  {
-    Host = "";
-    Topics = new Dictionary<string, KafkaTopicParameters>();
-  }
-
-  public string GetHost()
-  {
-    return Host;
-  }
-
-  public Dictionary<string, IKafkaTopicParameters> GetTopics()
-  {
-    return Topics.ToDictionary(topic => topic.Key, topic => topic.Value as IKafkaTopicParameters);
-  }
-}
-
-public class KafkaTopicParameters: IKafkaTopicParameters
-{
-  public string Name { get; set; }
-  public string Group { get; set; }
-
-  public KafkaTopicParameters()
-  {
-    Name = "";
-    Group = "";
-  }
-
-  public string GetName()
-  {
-    return Name;
-  }
-
-  public string GetGroup()
-  {
-    return Group;
-  }
-}
-
-public class CassandraParameters: ICassandraParameters
-{
-  public string Host { get; set; }
-  public int Port { get; set; }
-  [YamlMember(Alias = "db_name", ApplyNamingConventions = false)]
-  public string DbName { get; set; }
-
-  public CassandraParameters()
-  {
-    Host = "";
-    DbName = "";
-  }
-
-  public string GetHost()
-  {
-    return Host;
-  }
-
-  public int GetPort()
-  {
-    return Port;
-  }
-
-  public string GetDbName()
-  {
-    return DbName;
   }
 }
