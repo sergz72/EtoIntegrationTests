@@ -183,7 +183,7 @@ public class Tests: StackLayout, ITestLogger
         _testsList.Success(_currentTest);
       else if (data.StartsWith("##started "))
       {
-        _currentTest = data[11..];
+        _currentTest = data[10..];
         _testsList.Started(_currentTest);
       }
       else if (data.StartsWith("##failure "))

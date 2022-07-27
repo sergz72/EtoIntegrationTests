@@ -74,15 +74,14 @@ public class HttpServer
 
   private void SendResponse(HttpListenerContext context, int statusCode, string? content)
   {
-    HttpListenerResponse response = context.Response;
+    var response = context.Response;
     response.StatusCode = statusCode;
     if (content != null)
     {
-      byte[] buffer = System.Text.Encoding.UTF8.GetBytes(content);
+      var buffer = System.Text.Encoding.UTF8.GetBytes(content);
       response.ContentLength64 = buffer.Length;
-      System.IO.Stream output = response.OutputStream;
-      output.Write(buffer, 0, buffer.Length);
-      output.Close();
+      response.OutputStream.Write(buffer, 0, buffer.Length);
     }
+    response.OutputStream.Close();
   }
 }
