@@ -13,7 +13,7 @@ public class Script
   public Dictionary<string, ServiceSet> ServiceSets { get; set; }
 
   [YamlMember(Alias = "service_subsets", ApplyNamingConventions = false)]
-  public Dictionary<string, List<string>> ServiceSubSets { get; set; }
+  public Dictionary<string, List<string>?> ServiceSubSets { get; set; }
 
   [YamlMember(Alias = "local_services", ApplyNamingConventions = false)]
   public Dictionary<string, YAMLLocalService> LocalServices { get; set; }
@@ -25,7 +25,7 @@ public class Script
   {
     ServiceSets = new Dictionary<string, ServiceSet>();
     LocalServices = new Dictionary<string, YAMLLocalService>();
-    ServiceSubSets = new Dictionary<string, List<string>>();
+    ServiceSubSets = new Dictionary<string, List<string>?>();
     TestParameters = new Parameters();
   }
 
@@ -48,11 +48,14 @@ public class Script
   {
     foreach (var subset in ServiceSubSets)
     {
-      foreach (var service in subset.Value)
+      if (subset.Value != null)
       {
-        if (!LocalServices.ContainsKey(service))
+        foreach (var service in subset.Value)
         {
-          ValidationException(subset.Key, "unknown service name in subset");
+          if (!LocalServices.ContainsKey(service))
+          {
+            ValidationException(subset.Key, "unknown service name in subset");
+          }
         }
       }
     }
@@ -108,9 +111,9 @@ public class ServiceSet
     return Services.Union(ExpandIncludes(script.ServiceSubSets));
   }
 
-  private IEnumerable<string> ExpandIncludes(Dictionary<string, List<string>> serviceSubsets)
+  private IEnumerable<string> ExpandIncludes(Dictionary<string, List<string>?> serviceSubsets)
   {
-    return Includes.Select(include => serviceSubsets[include]).SelectMany(set => set);
+    return Includes.Select(include => serviceSubsets[include]).Where(set => set != null).SelectMany(set => set);
   }
 }
 
