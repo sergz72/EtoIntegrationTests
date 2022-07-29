@@ -224,7 +224,9 @@ namespace EtoIntegrationTests
     {
       var item = _tasks.SelectedItem as TasksItem;
       _actionsPanel.Pages.Clear();
-      if (item == null || item.Status == ItemStatus.Disabled)
+      if (item == null)
+        return;
+      if (item.Status == ItemStatus.Disabled)
       {
         _stopButton.Enabled = false;
         _startButton.Enabled = false;
@@ -279,6 +281,7 @@ namespace EtoIntegrationTests
       else
       {
         StartServices(_scriptsView.SelectedItem as ScriptsTreeItem);
+        ScriptsViewOnSelectedItemChanged(null, EventArgs.Empty);
       }
     }
     
@@ -291,6 +294,7 @@ namespace EtoIntegrationTests
       else
       {
         StopServices(_scriptsView.SelectedItem as ScriptsTreeItem);
+        ScriptsViewOnSelectedItemChanged(null, EventArgs.Empty);
       }
     }
     
