@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using Cassandra;
 using Eto.Forms;
+using EtoIntegrationTests.Databases;
 
 namespace EtoIntegrationTests;
 
@@ -12,18 +12,25 @@ class CassandraPageBuilder : IPageBuilder
 {
   public TabPage BuildPage(string pageName, string? parameters, ConsoleLogger logger)
   {
-    return new TabPage{ Content = new CassandraClient(parameters), Text = pageName };
+    return new TabPage{ Content = new DatabaseClient(new Databases.Cassandra(), parameters), Text = pageName };
   }
 }
 
-class CassandraClient : StackLayout
+class PostgresPageBuilder : IPageBuilder
+{
+  public TabPage BuildPage(string pageName, string? parameters, ConsoleLogger logger)
+  {
+    return new TabPage{ Content = new DatabaseClient(new Postgres(), parameters), Text = pageName };
+  }
+}
+
+class DatabaseClient : StackLayout
 {
   private readonly TabControl _tabs;
   private readonly ListBox _messages;
-  private readonly string _hostName, _dbName;
-  private readonly int _port;
+  private readonly IDatabase _database;
   
-  public CassandraClient(string? parameters)
+  public DatabaseClient(IDatabase database, string? parameters)
   {
     _tabs = new TabControl();
     _messages = new ListBox();
@@ -70,19 +77,13 @@ class CassandraClient : StackLayout
       Control = _messages,
       Expand = true
     });
-    
-    var parts = parameters?.Split(' ');
-    if (parts is not { Length: 3 } || !int.TryParse(parts[1], out _port))
+
+    _database = database;
+    if (!_database.SetParameters(parameters))
     {
       _messages.Items.Add("Incorrect parameters");
       refreshButton.Enabled = false;
-      _hostName = "";
-      _dbName = "";
-      return;
     }
-
-    _hostName = parts[0];
-    _dbName = parts[2];
   }
 
   private void RunCQLButtonOnClick(object? sender, EventArgs e)
@@ -90,19 +91,14 @@ class CassandraClient : StackLayout
     var dialog = new OpenFileDialog();
     dialog.MultiSelect = true;
     dialog.Directory = new Uri(Directory.GetCurrentDirectory());
-    
+
     try
     {
       if (dialog.ShowDialog(this) == DialogResult.Ok)
       {
         _messages.Items.Clear();
-        var cluster = Cluster.Builder()
-          .AddContactPoint(_hostName)
-          .WithPort(_port)
-          .Build();
-        using var session = cluster.Connect();
+        _database.Connect();
         _messages.Items.Add("Connected to database...");
-        session.ChangeKeyspace(_dbName);
         foreach (var fileName in dialog.Filenames)
         {
           _messages.Items.Add($"Executing {fileName}");
@@ -117,7 +113,7 @@ class CassandraClient : StackLayout
               sb.Append(trimmed);
               var statement = sb.ToString();
               _messages.Items.Add(statement);
-              session.Execute(statement);
+              _database.Execute(statement);
               sb.Clear();
             }
             else
@@ -130,6 +126,10 @@ class CassandraClient : StackLayout
     {
       _messages.Items.Add(exception.Message);
     }
+    finally
+    {
+      _database.Disconnect();
+    }
   }
 
   private void RefreshButtonOnClick(object? sender, EventArgs e)
@@ -137,61 +137,59 @@ class CassandraClient : StackLayout
     _messages.Items.Clear();
     try
     {
-      var cluster = Cluster.Builder()
-        .AddContactPoint(_hostName)
-        .WithPort(_port)
-        .Build();
-      using var session = cluster.Connect();
+      _database.Connect();
       _messages.Items.Add("Connected to database...");
-      var tableNames = session
-        .Execute($"SELECT * FROM system_schema.tables WHERE keyspace_name = '{_dbName}'")
-        .Select(row => row.GetValue<string>("table_name"));
+      var tableNames = _database.GetTableNames();
       _tabs.Pages.Clear();
       foreach (var tableName in tableNames)
       {
-        _tabs.Pages.Add(BuildTabPage(session, tableName));
+        _tabs.Pages.Add(BuildTabPage(tableName));
       }
     }
     catch (Exception exception)
     {
       _messages.Items.Add(exception.Message);
     }
+    finally
+    {
+      _database.Disconnect();
+    }
   }
 
-  private TabPage BuildTabPage(ISession session, string tableName)
+  private TabPage BuildTabPage(string tableName)
   {
-    return new TabPage { Text = tableName, Content = BuildPageContent(session, tableName) };
+    return new TabPage { Text = tableName, Content = BuildPageContent(tableName) };
   }
 
-  private Control BuildPageContent(ISession session, string tableName)
+  private Control BuildPageContent(string tableName)
   {
     var content = new TreeGridView();
-    var rows = session.Execute($"select * from {_dbName}.{tableName}");
+    var rows = _database.GetTableRows(tableName);
 
     int idx = 0;
     foreach (var column in rows.Columns)
     {
       content.Columns.Add(new GridColumn
       {
-        HeaderText = column.Name,
+        HeaderText = column,
         DataCell = new TextBoxCell
         {
-          Binding = new CassandraColumnBinding(idx)
+          Binding = new DatabaseColumnBinding(idx)
         }
       });
       idx++;
     }
 
-    content.DataStore = new CassandraDataStore(rows);
+    content.DataStore = new DatabaseDataStore(rows);
 
     return content;
   }
 }
 
-internal class CassandraColumnBinding : IIndirectBinding<string>
+internal class DatabaseColumnBinding : IIndirectBinding<string>
 {
   private readonly int _idx;
-  public CassandraColumnBinding(int idx)
+  public DatabaseColumnBinding(int idx)
   {
     _idx = idx;
   }
@@ -207,7 +205,7 @@ internal class CassandraColumnBinding : IIndirectBinding<string>
 
   public string GetValue(object dataItem)
   {
-    return (dataItem as CassandraTreeGridItem)![_idx];
+    return (dataItem as DatabaseTreeGridItem)![_idx];
   }
 
   public void SetValue(object dataItem, string value)
@@ -216,21 +214,21 @@ internal class CassandraColumnBinding : IIndirectBinding<string>
   }
 }
 
-internal class CassandraDataStore : ITreeGridStore<CassandraTreeGridItem>
+internal class DatabaseDataStore : ITreeGridStore<DatabaseTreeGridItem>
 {
-  public CassandraDataStore(RowSet rows)
+  public DatabaseDataStore(RowSet rows)
   {
-    _rows = rows.Select(row => new CassandraTreeGridItem(row)).ToList();
+    _rows = rows.Rows.Select(row => new DatabaseTreeGridItem(row)).ToList();
   }
 
   public int Count => _rows.Count;
 
-  private readonly List<CassandraTreeGridItem> _rows;
+  private readonly List<DatabaseTreeGridItem> _rows;
 
-  public CassandraTreeGridItem this[int index] => _rows[index];
+  public DatabaseTreeGridItem this[int index] => _rows[index];
 }
 
-internal class CassandraTreeGridItem : ITreeGridItem
+internal class DatabaseTreeGridItem : ITreeGridItem
 {
   public bool Expanded { get; set; }
   public bool Expandable => false;
@@ -238,9 +236,9 @@ internal class CassandraTreeGridItem : ITreeGridItem
   
   public string this[int index] => _row[index].ToString() ?? "null";
 
-  private readonly Row _row;
+  private readonly List<object> _row;
   
-  public CassandraTreeGridItem(Row row)
+  public DatabaseTreeGridItem(List<object> row)
   {
     _row = row;
   }

@@ -18,7 +18,8 @@ public class Service: IService
   {
     { "console", new ConsolePageBuilder() },
     { "kafka", new KafkaPageBuilder() },
-    { "cassandra", new CassandraPageBuilder() }
+    { "cassandra", new CassandraPageBuilder() },
+    { "postgres", new PostgresPageBuilder() }
   };
 
   public static bool IsValidWindowType(string windowType)

@@ -6,6 +6,7 @@ public class Parameters
 {
   public KafkaParameters Kafka { get; set; }
   public CassandraParameters Cassandra { get; set; }
+  public PostgresParameters Postgres { get; set; }
 
   public Parameters()
   {
@@ -50,6 +51,26 @@ public class CassandraParameters
   {
     Host = "";
     DbName = "";
+  }
+}
+
+public class PostgresParameters
+{
+  public string Host { get; set; }
+  public int Port { get; set; }
+  [YamlMember(Alias = "db_name", ApplyNamingConventions = false)]
+  public string DbName { get; set; }
+  [YamlMember(Alias = "db_user", ApplyNamingConventions = false)]
+  public string DbUser { get; set; }
+  [YamlMember(Alias = "db_password", ApplyNamingConventions = false)]
+  public string DbPassword { get; set; }
+
+  public PostgresParameters()
+  {
+    Host = "";
+    DbName = "";
+    DbUser = "";
+    DbPassword = "";
   }
 }
 
