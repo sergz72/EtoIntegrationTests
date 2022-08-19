@@ -8,17 +8,28 @@ public class Postgres: IDatabase
 {
   private string? _hostName, _dbName, _dbUser, _dbPassword;
   private int _port;
+  private Dictionary<string, string>? dbParameters;
   private NpgsqlConnection? _connection;
 
   public bool SetParameters(string? parameters)
   {
     var parts = parameters?.Split(' ');
-    if (parts is not { Length: 5 } || !int.TryParse(parts[1], out _port))
+    if (parts == null || parts.Length < 5 || !int.TryParse(parts[1], out _port))
       return false;
     _hostName = parts[0];
     _dbName = parts[2];
     _dbUser = parts[3];
     _dbPassword = parts[4];
+    dbParameters = new Dictionary<string, string>();
+    for (var n = 5; n < parts.Length; n++)
+    {
+      var parameter = parts[n].Split(':');
+      if (parameter.Length == 2)
+      {
+        dbParameters[parameter[0]] = parameter[1];
+      }
+    }
+
     return true;
   }
 
@@ -28,6 +39,15 @@ public class Postgres: IDatabase
 
     _connection = new NpgsqlConnection(connString);
     _connection.Open();
+    if (dbParameters?.Count > 0)
+    {
+      foreach (var parameter in dbParameters)
+      {
+        var reader = new NpgsqlCommand($"SELECT set_config('{parameter.Key}', '{parameter.Value}', true)", _connection)
+          .ExecuteReader();
+        reader.Close();
+      }
+    }
   }
 
   public void Execute(string statement)
@@ -42,12 +62,29 @@ public class Postgres: IDatabase
 
   public IEnumerable<string> GetTableNames()
   {
-    using var reader = 
-      new NpgsqlCommand("SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'", _connection)
-      .ExecuteReader();
+    var tablespaces = new List<string>();
+    using (var reader =
+           new NpgsqlCommand("SELECT nspname FROM pg_catalog.pg_namespace", _connection).ExecuteReader())
+    {
+      while (reader.Read())
+      {
+        var tablespaceName = reader.GetString(0);
+        if (tablespaceName != "pg_catalog" && tablespaceName != "information_schema")
+          tablespaces.Add(tablespaceName);
+      }
+    }
+
     var result = new List<string>();
-    while (reader.Read())
-      result.Add(reader.GetString(0));
+    foreach (var tablespaceName in tablespaces)
+    {
+      using (var reader = new NpgsqlCommand(
+               $"SELECT table_name FROM information_schema.tables WHERE table_schema='{tablespaceName}' AND table_type='BASE TABLE'",
+               _connection).ExecuteReader()) {
+        while (reader.Read())
+          result.Add(tablespaceName + "." + reader.GetString(0));
+      }
+    }
+
     return result;
   }
 
