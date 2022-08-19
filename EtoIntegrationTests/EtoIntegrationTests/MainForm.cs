@@ -198,8 +198,19 @@ namespace EtoIntegrationTests
     private void ScriptsViewOnSelectedItemChanged(object? sender, EventArgs e)
     {
       var item = _scriptsView.SelectedItem as ScriptsTreeItem;
-      _tasks.ShowServices(item?.GetServices());
-      _tests.ShowTests(item?.Folder, item?.Parameters, item?.TestServices);
+      try
+      {
+        _tasks.ShowServices(item?.GetServices());
+        _tests.ShowTests(item?.Folder, item?.Parameters, item?.TestServices);
+      }
+      catch (Exception exception)
+      {
+        MessageBox.Show(this, exception.Message, "Error");
+        _stopButton.Enabled = false;
+        _startButton.Enabled = false;
+        return;
+      }
+
       if (item is not { Expandable: false })
       {
         _stopButton.Enabled = false;
