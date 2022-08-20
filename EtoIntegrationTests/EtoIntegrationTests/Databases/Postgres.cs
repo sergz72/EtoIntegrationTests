@@ -43,7 +43,7 @@ public class Postgres: IDatabase
     {
       foreach (var parameter in dbParameters)
       {
-        var reader = new NpgsqlCommand($"SELECT set_config('{parameter.Key}', '{parameter.Value}', true)", _connection)
+        var reader = new NpgsqlCommand($"SELECT set_config('{parameter.Key}', '{parameter.Value}', false)", _connection)
           .ExecuteReader();
         reader.Close();
       }
